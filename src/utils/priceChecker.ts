@@ -6,8 +6,42 @@ export async function checkPrice(url: string, selector: string): Promise<number>
   try {
     const response = await axios.get(url);
     const $ = cheerio.load(response.data);
-    const priceText = $(selector).text();
-    const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
+    
+    // Try CSS selector first
+    let priceText = $(selector).text();
+    
+    // If no result with CSS selector, try XPath
+    if (!priceText && selector.startsWith('/')) {
+      const elements = $('*').filter((_, el) => {
+        try {
+          return document.evaluate(selector, el, null, XPathResult.BOOLEAN_TYPE, null).booleanValue;
+        } catch {
+          return false;
+        }
+      });
+      if (elements.length > 0) {
+        priceText = elements.first().text();
+      }
+    }
+
+    // If still no price text found, try data-price attribute
+    if (!priceText) {
+      priceText = $(selector).attr('data-price') || '';
+    }
+
+    if (!priceText) {
+      throw new Error('Price element not found');
+    }
+
+    // Clean up the price text
+    // Remove all non-numeric characters except dots and commas
+    const cleanPrice = priceText.replace(/[^0-9,\.]/g, '');
+    
+    // Handle European number format (comma as decimal separator)
+    // If there's a comma and it's followed by exactly 2 digits, treat it as decimal separator
+    const price = cleanPrice.includes(',') && /,\d{2}$/.test(cleanPrice)
+      ? parseFloat(cleanPrice.replace(',', '.'))
+      : parseFloat(cleanPrice.replace(/,/g, ''));
     
     if (isNaN(price)) {
       throw new Error('Could not parse price');

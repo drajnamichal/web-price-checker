@@ -122,14 +122,23 @@ export default function Home() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Price Selector (CSS)</label>
+          <label className="block text-sm font-medium mb-1">
+            Price Selector (CSS or XPath)
+            <span className="ml-1 text-gray-500 hover:text-gray-700 cursor-help" title="Enter a CSS selector (e.g., #price, .price-actual) or XPath (e.g., //span[@id='price']). The selector should target the element containing the price.">
+              ⓘ
+            </span>
+          </label>
           <input
             type="text"
             value={priceSelector}
             onChange={(e) => setPriceSelector(e.target.value)}
             className="w-full p-2 border rounded"
+            placeholder="e.g., #JS_price, .price-actual, //span[@data-price]"
             required
           />
+          <p className="mt-1 text-sm text-gray-500">
+            Tip: Use browser's inspect element to find the correct selector
+          </p>
         </div>
         <button
           type="submit"
