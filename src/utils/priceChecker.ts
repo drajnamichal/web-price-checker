@@ -1,11 +1,11 @@
 import axios from 'axios';
-import { load } from 'cheerio';
+import * as cheerio from 'cheerio';
 import { Product } from '@/types/product';
 
 export async function checkPrice(url: string, selector: string): Promise<number> {
   try {
     const response = await axios.get(url);
-    const $ = load(response.data);
+    const $ = cheerio.load(response.data);
     const priceText = $(selector).text();
     const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
     
