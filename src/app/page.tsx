@@ -1,103 +1,171 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Product } from '@/types/product';
+import { checkPrice, formatPrice, requestNotificationPermission, sendPriceDropNotification } from '@/utils/priceChecker';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [products, setProducts] = useState<Product[]>([]);
+  const [url, setUrl] = useState('');
+  const [priceSelector, setPriceSelector] = useState('');
+  const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    // Load products from localStorage on mount
+    const savedProducts = localStorage.getItem('products');
+    if (savedProducts) {
+      setProducts(JSON.parse(savedProducts));
+    }
+
+    // Request notification permission
+    requestNotificationPermission();
+
+    // Set up price checking interval
+    const interval = setInterval(checkAllPrices, 3600000); // Every hour
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    // Save products to localStorage whenever they change
+    localStorage.setItem('products', JSON.stringify(products));
+  }, [products]);
+
+  const checkAllPrices = async () => {
+    const updatedProducts = await Promise.all(
+      products.map(async (product) => {
+        try {
+          const newPrice = await checkPrice(product.url, product.priceSelector);
+          if (newPrice !== product.currentPrice) {
+            if (shouldNotifyPriceDrop(newPrice, product.currentPrice)) {
+              sendPriceDropNotification({
+                ...product,
+                previousPrice: product.currentPrice,
+                currentPrice: newPrice
+              });
+            }
+            return {
+              ...product,
+              previousPrice: product.currentPrice,
+              currentPrice: newPrice,
+              lastChecked: new Date().toISOString()
+            };
+          }
+          return product;
+        } catch (error) {
+          console.error(`Error checking price for ${product.name}:`, error);
+          return product;
+        }
+      })
+    );
+    setProducts(updatedProducts);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const currentPrice = await checkPrice(url, priceSelector);
+      const newProduct: Product = {
+        id: Date.now().toString(),
+        url,
+        priceSelector,
+        name,
+        currentPrice,
+        previousPrice: null,
+        lastChecked: new Date().toISOString()
+      };
+
+      setProducts([...products, newProduct]);
+      setUrl('');
+      setPriceSelector('');
+      setName('');
+    } catch (error) {
+      console.error('Error adding product:', error);
+      alert('Error adding product. Please check the URL and price selector.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    setProducts(products.filter(product => product.id !== id));
+  };
+
+  return (
+    <main className="min-h-screen p-8">
+      <h1 className="text-3xl font-bold mb-8">Web Price Checker</h1>
+
+      <form onSubmit={handleSubmit} className="mb-8 space-y-4 max-w-xl">
+        <div>
+          <label className="block text-sm font-medium mb-1">Product Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full p-2 border rounded"
+            required
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+        <div>
+          <label className="block text-sm font-medium mb-1">Product URL</label>
+          <input
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            className="w-full p-2 border rounded"
+            required
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Price Selector (CSS)</label>
+          <input
+            type="text"
+            value={priceSelector}
+            onChange={(e) => setPriceSelector(e.target.value)}
+            className="w-full p-2 border rounded"
+            required
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300"
         >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          {loading ? 'Adding...' : 'Add Product'}
+        </button>
+      </form>
+
+      <div className="space-y-4">
+        {products.map((product) => (
+          <div key={product.id} className="border p-4 rounded shadow-sm">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-bold">{product.name}</h3>
+                <p className="text-sm text-gray-600">{product.url}</p>
+                <p className="mt-2">
+                  Current Price: <span className="font-bold">{formatPrice(product.currentPrice)}</span>
+                  {product.previousPrice && (
+                    <span className="ml-2 text-sm text-gray-600">
+                      Previous: {formatPrice(product.previousPrice)}
+                    </span>
+                  )}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Last checked: {new Date(product.lastChecked).toLocaleString()}
+                </p>
+              </div>
+              <button
+                onClick={() => handleDelete(product.id)}
+                className="text-red-500 hover:text-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </main>
   );
 }
