@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/product';
-import { checkPrice, requestNotificationPermission, sendPriceDropNotification, shouldNotifyPriceDrop } from '@/utils/priceChecker';
+import { requestNotificationPermission, sendPriceDropNotification, shouldNotifyPriceDrop } from '@/utils/priceChecker';
 import Link from 'next/link';
 
 export default function Home() {
@@ -13,48 +13,25 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Load products from localStorage on mount
-    const savedProducts = localStorage.getItem('products');
-    if (savedProducts) {
-      setProducts(JSON.parse(savedProducts));
-    }
+    // Load products from API on mount
+    fetchProducts();
 
     // Request notification permission
     requestNotificationPermission();
-  }, []); // Initial load only
+  }, []);
 
   // Separate useEffect for price checking to properly handle products dependency
   useEffect(() => {
     // Define checkAllPrices inside useEffect to include it in the closure
     const checkAllPrices = async () => {
-      const updatedProducts = await Promise.all(
-        products.map(async (product) => {
-          try {
-            const newPrice = await checkPrice(product.url, product.priceSelector);
-            if (newPrice !== product.currentPrice) {
-              if (shouldNotifyPriceDrop(newPrice, product.currentPrice)) {
-                sendPriceDropNotification({
-                  ...product,
-                  previousPrice: product.currentPrice,
-                  currentPrice: newPrice
-                });
-              }
-              return {
-                ...product,
-                previousPrice: product.currentPrice,
-                currentPrice: newPrice,
-                lastChecked: new Date().toISOString()
-              };
-            }
-            return product;
-          } catch (error) {
-            console.error(`Error checking price for ${product.name}:`, error);
-            return product;
-          }
-        })
-      );
-      setProducts(updatedProducts);
-      localStorage.setItem('products', JSON.stringify(updatedProducts));
+      try {
+        const response = await fetch('/api/products');
+        if (!response.ok) throw new Error('Failed to fetch products');
+        const updatedProducts = await response.json();
+        setProducts(updatedProducts);
+      } catch (error) {
+        console.error('Error checking prices:', error);
+      }
     };
 
     // Set up price checking interval
@@ -62,27 +39,43 @@ export default function Home() {
     
     // Clean up interval on unmount
     return () => clearInterval(interval);
-  }, [products]); // Add products as dependency since it's used in checkAllPrices
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('/api/products');
+      if (!response.ok) throw new Error('Failed to fetch products');
+      const products = await response.json();
+      setProducts(products);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const currentPrice = await checkPrice(url, priceSelector);
-      const newProduct: Product = {
-        id: Date.now().toString(),
-        url,
-        priceSelector,
-        name,
-        currentPrice,
-        previousPrice: null,
-        lastChecked: new Date().toISOString()
-      };
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url,
+          priceSelector,
+          name,
+        }),
+      });
 
-      const updatedProducts = [...products, newProduct];
-      setProducts(updatedProducts);
-      localStorage.setItem('products', JSON.stringify(updatedProducts));
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to add product');
+      }
+
+      const newProduct = await response.json();
+      setProducts([...products, newProduct]);
       
       setUrl('');
       setPriceSelector('');

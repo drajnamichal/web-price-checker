@@ -11,22 +11,42 @@ export default function WatchList() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedProducts = localStorage.getItem('products');
-    if (storedProducts) {
-      try {
-        setProducts(JSON.parse(storedProducts));
-      } catch (err) {
-        setError('Failed to load products');
-        console.error('Error parsing products:', err);
-      }
-    }
-    setLoading(false);
+    fetchProducts();
   }, []);
 
-  const removeProduct = (url: string) => {
-    const updatedProducts = products.filter(product => product.url !== url);
-    localStorage.setItem('products', JSON.stringify(updatedProducts));
-    setProducts(updatedProducts);
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('/api/products');
+      if (!response.ok) throw new Error('Failed to fetch products');
+      const products = await response.json();
+      setProducts(products);
+      setLoading(false);
+    } catch (err) {
+      setError('Failed to load products');
+      console.error('Error fetching products:', err);
+      setLoading(false);
+    }
+  };
+
+  const removeProduct = async (id: string) => {
+    try {
+      const response = await fetch('/api/products', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete product');
+      }
+
+      setProducts(products.filter(product => product.id !== id));
+    } catch (error) {
+      console.error('Error removing product:', error);
+      alert('Failed to remove product');
+    }
   };
 
   if (loading) {
@@ -73,11 +93,11 @@ export default function WatchList() {
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">No products in your watch list yet.</p>
           </div>
-        ) : (
+        ) :
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {products.map((product) => (
               <div
-                key={product.url}
+                key={product.id}
                 className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
               >
                 <div className="p-6">
@@ -110,7 +130,7 @@ export default function WatchList() {
                       Visit Website
                     </a>
                     <button
-                      onClick={() => removeProduct(product.url)}
+                      onClick={() => removeProduct(product.id)}
                       className="text-red-600 hover:text-red-800 text-sm"
                     >
                       Remove

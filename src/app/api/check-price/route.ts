@@ -38,26 +38,41 @@ export async function POST(request: Request) {
       if (!priceText) {
         console.log('Trying common price selectors...');
         const commonSelectors = [
+          // Schema.org price attribute
+          '[itemprop="price"]',
+          // Common price classes
+          '.price span[itemprop="price"]',
+          '.final-price span[itemprop="price"]',
+          '.price-table span[itemprop="price"]',
           '.price',
           '[data-price]',
-          '[itemprop="price"]',
           '.product-price',
           '.current-price',
           selector.replace('#', '.'),
-          '.js-price', // Common for JavaScript-based price elements
+          '.js-price',
           '#price',
           '.price-wrapper',
           '.product__price'
         ];
         
         for (const commonSelector of commonSelectors) {
-          const element = $(commonSelector);
-          if (element.length > 0) {
-            priceText = element.text() || element.attr('data-price') || '';
-            if (priceText) {
-              console.log(`Found price using common selector "${commonSelector}": "${priceText}"`);
-              break;
-            }
+          const elements = $(commonSelector);
+          if (elements.length > 0) {
+            // If multiple elements found, try to find the main price
+            elements.each((_, element) => {
+              const elementText = $(element).text() || $(element).attr('data-price') || $(element).attr('content') || '';
+              const cleanedPrice = elementText.replace(/[^0-9,\.]/g, '');
+              const price = cleanedPrice.includes(',') && /,\d{2}$/.test(cleanedPrice)
+                ? parseFloat(cleanedPrice.replace(',', '.'))
+                : parseFloat(cleanedPrice.replace(/,/g, ''));
+              
+              if (!isNaN(price) && (!priceText || price > parseFloat(priceText.replace(/[^0-9,\.]/g, '').replace(',', '.')))) {
+                priceText = elementText;
+                console.log(`Found price using common selector "${commonSelector}": "${priceText}" (${price})`);
+              }
+            });
+            
+            if (priceText) break;
           }
         }
       }
@@ -92,8 +107,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ price });
   } catch (error) {
     console.error('Error checking price:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Network error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+    }
     return NextResponse.json(
-      { error: 'Failed to check price' },
+      { error: 'Failed to check price. The website might be blocking our requests.' },
       { status: 500 }
     );
   }
