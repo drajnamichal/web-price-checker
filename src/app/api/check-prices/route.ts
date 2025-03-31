@@ -14,25 +14,26 @@ export async function POST() {
           // Convert both to numbers for comparison
           const currentPriceNum = Number(product.currentPrice);
           if (newPrice !== currentPriceNum) {
+            const now = new Date();
             // Update product in database
             await updateProduct(product.id, {
               previousPrice: currentPriceNum,
               currentPrice: newPrice,
-              lastChecked: new Date().toISOString()
+              lastChecked: now
             });
 
             // Add price history entry
             await addPriceHistory({
               productId: product.id,
               price: newPrice,
-              timestamp: new Date().toISOString()
+              timestamp: now
             });
 
             return {
               ...product,
               previousPrice: currentPriceNum,
               currentPrice: newPrice,
-              lastChecked: new Date().toISOString()
+              lastChecked: now.toISOString()
             };
           }
           return product;
