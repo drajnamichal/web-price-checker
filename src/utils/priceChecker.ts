@@ -10,21 +10,7 @@ export async function checkPrice(url: string, selector: string): Promise<number>
     // Try CSS selector first
     let priceText = $(selector).text();
     
-    // If no result with CSS selector, try XPath
-    if (!priceText && selector.startsWith('/')) {
-      const elements = $('*').filter((_, el) => {
-        try {
-          return document.evaluate(selector, el, null, XPathResult.BOOLEAN_TYPE, null).booleanValue;
-        } catch {
-          return false;
-        }
-      });
-      if (elements.length > 0) {
-        priceText = elements.first().text();
-      }
-    }
-
-    // If still no price text found, try data-price attribute
+    // If no result with CSS selector and it looks like XPath, try data-price attribute
     if (!priceText) {
       priceText = $(selector).attr('data-price') || '';
     }
