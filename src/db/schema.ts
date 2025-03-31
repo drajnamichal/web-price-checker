@@ -1,19 +1,19 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { mysqlTable, varchar, int, decimal, timestamp } from 'drizzle-orm/mysql-core';
 
-export const products = sqliteTable('products', {
-  id: text('id').primaryKey(),
-  url: text('url').notNull(),
-  priceSelector: text('price_selector').notNull(),
-  name: text('name').notNull(),
-  currentPrice: real('current_price').notNull(),
-  previousPrice: real('previous_price'),
-  lastChecked: text('last_checked').notNull(),
-  createdAt: text('created_at').notNull()
+export const products = mysqlTable('products', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  url: varchar('url', { length: 2048 }).notNull(),
+  priceSelector: varchar('price_selector', { length: 1024 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  currentPrice: decimal('current_price', { precision: 10, scale: 2 }).notNull(),
+  previousPrice: decimal('previous_price', { precision: 10, scale: 2 }),
+  lastChecked: timestamp('last_checked').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow()
 });
 
-export const priceHistory = sqliteTable('price_history', {
-  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
-  productId: text('product_id').notNull().references(() => products.id),
-  price: real('price').notNull(),
-  timestamp: text('timestamp').notNull()
+export const priceHistory = mysqlTable('price_history', {
+  id: int('id').primaryKey().autoincrement(),
+  productId: varchar('product_id', { length: 255 }).notNull().references(() => products.id),
+  price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+  timestamp: timestamp('timestamp').notNull().defaultNow()
 }); 
