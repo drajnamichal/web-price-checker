@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/product';
-import { checkPrice, formatPrice, requestNotificationPermission, sendPriceDropNotification } from '@/utils/priceChecker';
+import { checkPrice, formatPrice, requestNotificationPermission, sendPriceDropNotification, shouldNotifyPriceDrop } from '@/utils/priceChecker';
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -21,45 +21,48 @@ export default function Home() {
     // Request notification permission
     requestNotificationPermission();
 
+    // Define checkAllPrices inside useEffect to include it in the closure
+    const checkAllPrices = async () => {
+      const updatedProducts = await Promise.all(
+        products.map(async (product) => {
+          try {
+            const newPrice = await checkPrice(product.url, product.priceSelector);
+            if (newPrice !== product.currentPrice) {
+              if (shouldNotifyPriceDrop(newPrice, product.currentPrice)) {
+                sendPriceDropNotification({
+                  ...product,
+                  previousPrice: product.currentPrice,
+                  currentPrice: newPrice
+                });
+              }
+              return {
+                ...product,
+                previousPrice: product.currentPrice,
+                currentPrice: newPrice,
+                lastChecked: new Date().toISOString()
+              };
+            }
+            return product;
+          } catch (error) {
+            console.error(`Error checking price for ${product.name}:`, error);
+            return product;
+          }
+        })
+      );
+      setProducts(updatedProducts);
+    };
+
     // Set up price checking interval
     const interval = setInterval(checkAllPrices, 3600000); // Every hour
+    
+    // Clean up interval on unmount
     return () => clearInterval(interval);
-  }, []);
+  }, [products]); // Add products as dependency since it's used in checkAllPrices
 
   useEffect(() => {
     // Save products to localStorage whenever they change
     localStorage.setItem('products', JSON.stringify(products));
   }, [products]);
-
-  const checkAllPrices = async () => {
-    const updatedProducts = await Promise.all(
-      products.map(async (product) => {
-        try {
-          const newPrice = await checkPrice(product.url, product.priceSelector);
-          if (newPrice !== product.currentPrice) {
-            if (shouldNotifyPriceDrop(newPrice, product.currentPrice)) {
-              sendPriceDropNotification({
-                ...product,
-                previousPrice: product.currentPrice,
-                currentPrice: newPrice
-              });
-            }
-            return {
-              ...product,
-              previousPrice: product.currentPrice,
-              currentPrice: newPrice,
-              lastChecked: new Date().toISOString()
-            };
-          }
-          return product;
-        } catch (error) {
-          console.error(`Error checking price for ${product.name}:`, error);
-          return product;
-        }
-      })
-    );
-    setProducts(updatedProducts);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
