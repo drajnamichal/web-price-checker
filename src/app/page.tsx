@@ -137,7 +137,7 @@ export default function Home() {
             required
           />
           <p className="mt-1 text-sm text-gray-500">
-            Tip: Use browser's inspect element to find the correct selector
+            Tip: Use browser&apos;s inspect element to find the correct selector
           </p>
         </div>
         <button
