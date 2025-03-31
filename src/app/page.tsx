@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/product';
-import { checkPrice, formatPrice, requestNotificationPermission, sendPriceDropNotification, shouldNotifyPriceDrop } from '@/utils/priceChecker';
+import { checkPrice, requestNotificationPermission, sendPriceDropNotification, shouldNotifyPriceDrop } from '@/utils/priceChecker';
 import Link from 'next/link';
 
 export default function Home() {
@@ -21,7 +21,10 @@ export default function Home() {
 
     // Request notification permission
     requestNotificationPermission();
+  }, []); // Initial load only
 
+  // Separate useEffect for price checking to properly handle products dependency
+  useEffect(() => {
     // Define checkAllPrices inside useEffect to include it in the closure
     const checkAllPrices = async () => {
       const updatedProducts = await Promise.all(
@@ -59,7 +62,7 @@ export default function Home() {
     
     // Clean up interval on unmount
     return () => clearInterval(interval);
-  }, []); // Remove products from dependencies to avoid infinite loop
+  }, [products]); // Add products as dependency since it's used in checkAllPrices
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
