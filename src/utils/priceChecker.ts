@@ -30,9 +30,11 @@ export function shouldNotifyPriceDrop(currentPrice: number, previousPrice: numbe
 }
 
 export function formatPrice(price: number): string {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('cs-CZ', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   }).format(price);
 }
 
