@@ -7,6 +7,11 @@ const nextConfig = {
       type: 'javascript/auto',
     });
 
+    config.module.rules.push({
+      test: /\.css$/,
+      use: ['postcss-loader'],
+    });
+
     return config;
   },
   transpilePackages: ['undici']
