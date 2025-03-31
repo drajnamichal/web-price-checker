@@ -1,5 +1,4 @@
 import axios from 'axios';
-import * as cheerio from 'cheerio';
 import { Product } from '@/types/product';
 
 export async function checkPrice(url: string, selector: string): Promise<number> {
