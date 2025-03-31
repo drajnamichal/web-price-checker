@@ -1,18 +1,18 @@
-import { connect } from '@planetscale/database';
+import { Client } from '@planetscale/database';
 import { drizzle } from 'drizzle-orm/planetscale-serverless';
 import { products, priceHistory } from './schema';
 import { eq } from 'drizzle-orm';
 import { Product } from '@/types/product';
 
 // Initialize PlanetScale client
-const connection = connect({
+const client = new Client({
   host: process.env.DATABASE_HOST,
   username: process.env.DATABASE_USERNAME,
   password: process.env.DATABASE_PASSWORD,
 });
 
 // Initialize Drizzle ORM
-export const db = drizzle(connection);
+export const db = drizzle(client);
 
 // Helper functions for database operations
 export async function addProduct(product: typeof products.$inferInsert) {
