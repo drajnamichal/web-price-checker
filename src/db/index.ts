@@ -42,7 +42,9 @@ export async function getProducts(): Promise<Product[]> {
   return results.map(product => ({
     ...product,
     currentPrice: Number(product.currentPrice),
-    previousPrice: product.previousPrice ? Number(product.previousPrice) : null
+    previousPrice: product.previousPrice ? Number(product.previousPrice) : null,
+    lastChecked: product.lastChecked.toISOString(),
+    createdAt: product.createdAt.toISOString()
   }));
 }
 
@@ -61,6 +63,7 @@ export async function getPriceHistory(productId: string) {
   
   return results.map(record => ({
     ...record,
-    price: Number(record.price)
+    price: Number(record.price),
+    timestamp: record.timestamp.toISOString()
   }));
 } 
