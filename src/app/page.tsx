@@ -124,7 +124,7 @@ export default function Home() {
         <div>
           <label className="block text-sm font-medium mb-1">
             Price Selector (CSS or XPath)
-            <span className="ml-1 text-gray-500 hover:text-gray-700 cursor-help" title="Enter a CSS selector (e.g., #price, .price-actual) or XPath (e.g., //span[@id='price']). The selector should target the element containing the price.">
+            <span className="ml-1 text-gray-500 hover:text-gray-700 cursor-help" title="Enter a CSS selector (e.g., #price, .price-actual) or XPath (e.g., //span[@id=&apos;price&apos;]). The selector should target the element containing the price.">
               ⓘ
             </span>
           </label>
