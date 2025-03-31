@@ -1,8 +1,23 @@
 @import "tailwindcss";
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply transition-colors duration-200;
+  }
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
+}
+
+[data-theme='dark'] {
+  --foreground-rgb: 255, 255, 255;
+  --background-rgb: 17, 24, 39;
 }
 
 @theme inline {
