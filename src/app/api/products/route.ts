@@ -17,27 +17,30 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { url, priceSelector, name } = await request.json();
+    const body = await request.json();
+    const { url, priceSelector, name } = body;
 
     if (!url || !priceSelector || !name) {
       return NextResponse.json(
-        { error: 'URL, price selector, and name are required' },
+        { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Check price before adding
-    const currentPrice = await checkPrice(url, priceSelector);
+    // Check initial price
+    const initialPrice = await checkPrice(url, priceSelector);
+    const now = new Date();
 
+    // Create product object
     const product = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       url,
       priceSelector,
       name,
-      currentPrice,
+      currentPrice: initialPrice,
       previousPrice: null,
-      lastChecked: new Date().toISOString(),
-      createdAt: new Date().toISOString()
+      lastChecked: now,
+      createdAt: now
     };
 
     await addProduct(product);
@@ -45,8 +48,8 @@ export async function POST(request: Request) {
     // Add initial price history
     await addPriceHistory({
       productId: product.id,
-      price: currentPrice,
-      timestamp: new Date().toISOString()
+      price: initialPrice,
+      timestamp: now
     });
 
     return NextResponse.json(product);
