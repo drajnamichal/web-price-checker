@@ -51,6 +51,7 @@ export default function Home() {
         })
       );
       setProducts(updatedProducts);
+      localStorage.setItem('products', JSON.stringify(updatedProducts));
     };
 
     // Set up price checking interval
@@ -58,12 +59,7 @@ export default function Home() {
     
     // Clean up interval on unmount
     return () => clearInterval(interval);
-  }, [products]); // Add products as dependency since it's used in checkAllPrices
-
-  useEffect(() => {
-    // Save products to localStorage whenever they change
-    localStorage.setItem('products', JSON.stringify(products));
-  }, [products]);
+  }, []); // Remove products from dependencies to avoid infinite loop
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +77,10 @@ export default function Home() {
         lastChecked: new Date().toISOString()
       };
 
-      setProducts([...products, newProduct]);
+      const updatedProducts = [...products, newProduct];
+      setProducts(updatedProducts);
+      localStorage.setItem('products', JSON.stringify(updatedProducts));
+      
       setUrl('');
       setPriceSelector('');
       setName('');
@@ -94,7 +93,9 @@ export default function Home() {
   };
 
   const handleDelete = (id: string) => {
-    setProducts(products.filter(product => product.id !== id));
+    const updatedProducts = products.filter(product => product.id !== id);
+    setProducts(updatedProducts);
+    localStorage.setItem('products', JSON.stringify(updatedProducts));
   };
 
   return (
@@ -109,90 +110,60 @@ export default function Home() {
             href="/watch-list"
             className="mt-4 inline-block bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
           >
-            View Watch List
+            View Watch List ({products.length})
           </Link>
         </div>
       </div>
 
-      <h1 className="text-3xl font-bold mb-8">Web Price Checker</h1>
-
-      <form onSubmit={handleSubmit} className="mb-8 space-y-4 max-w-xl">
-        <div>
-          <label className="block text-sm font-medium mb-1">Product Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full p-2 border rounded"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Product URL</label>
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            className="w-full p-2 border rounded"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Price Selector (CSS or XPath)
-            <span className="ml-1 text-gray-500 hover:text-gray-700 cursor-help" title="Enter a CSS selector (e.g., #price, .price-actual) or XPath (e.g., //span[@id=&apos;price&apos;]). The selector should target the element containing the price.">
-              ⓘ
-            </span>
-          </label>
-          <input
-            type="text"
-            value={priceSelector}
-            onChange={(e) => setPriceSelector(e.target.value)}
-            className="w-full p-2 border rounded"
-            placeholder="e.g., #JS_price, .price-actual, //span[@data-price]"
-            required
-          />
-          <p className="mt-1 text-sm text-gray-500">
-            Tip: Use browser&apos;s inspect element to find the correct selector
-          </p>
-        </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300"
-        >
-          {loading ? 'Adding...' : 'Add Product'}
-        </button>
-      </form>
-
-      <div className="space-y-4">
-        {products.map((product) => (
-          <div key={product.id} className="border p-4 rounded shadow-sm">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-bold">{product.name}</h3>
-                <p className="text-sm text-gray-600">{product.url}</p>
-                <p className="mt-2">
-                  Current Price: <span className="font-bold">{formatPrice(product.currentPrice)}</span>
-                  {product.previousPrice && (
-                    <span className="ml-2 text-sm text-gray-600">
-                      Previous: {formatPrice(product.previousPrice)}
-                    </span>
-                  )}
-                </p>
-                <p className="text-sm text-gray-500">
-                  Last checked: {new Date(product.lastChecked).toLocaleString()}
-                </p>
-              </div>
-              <button
-                onClick={() => handleDelete(product.id)}
-                className="text-red-500 hover:text-red-700"
-              >
-                Delete
-              </button>
-            </div>
+      <div className="max-w-7xl mx-auto">
+        <form onSubmit={handleSubmit} className="mb-8 space-y-4 max-w-xl">
+          <div>
+            <label className="block text-sm font-medium mb-1">Product Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full p-2 border rounded"
+              required
+            />
           </div>
-        ))}
+          <div>
+            <label className="block text-sm font-medium mb-1">Product URL</label>
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Price Selector (CSS or XPath)
+              <span className="ml-1 text-gray-500 hover:text-gray-700 cursor-help" title="Enter a CSS selector (e.g., #price, .price-actual) or XPath (e.g., //span[@id=&apos;price&apos;]). The selector should target the element containing the price.">
+                ⓘ
+              </span>
+            </label>
+            <input
+              type="text"
+              value={priceSelector}
+              onChange={(e) => setPriceSelector(e.target.value)}
+              className="w-full p-2 border rounded"
+              placeholder="e.g., #JS_price, .price-actual, //span[@data-price]"
+              required
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              Tip: Use browser&apos;s inspect element to find the correct selector
+            </p>
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300"
+          >
+            {loading ? 'Adding...' : 'Add Product'}
+          </button>
+        </form>
       </div>
     </main>
   );
