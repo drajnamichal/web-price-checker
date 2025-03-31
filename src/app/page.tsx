@@ -95,12 +95,6 @@ export default function Home() {
     }
   };
 
-  const handleDelete = (id: string) => {
-    const updatedProducts = products.filter(product => product.id !== id);
-    setProducts(updatedProducts);
-    localStorage.setItem('products', JSON.stringify(updatedProducts));
-  };
-
   return (
     <main className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
