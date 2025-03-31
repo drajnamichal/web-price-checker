@@ -93,7 +93,7 @@ export default function WatchList() {
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">No products in your watch list yet.</p>
           </div>
-        ) :
+        ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {products.map((product) => (
               <div
