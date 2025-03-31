@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/product';
 import { checkPrice, formatPrice, requestNotificationPermission, sendPriceDropNotification, shouldNotifyPriceDrop } from '@/utils/priceChecker';
+import Link from 'next/link';
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -98,6 +99,21 @@ export default function Home() {
 
   return (
     <main className="min-h-screen p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-extrabold text-gray-900">Price Checker</h2>
+          <p className="mt-4 text-lg text-gray-600">
+            Add products to track their prices
+          </p>
+          <Link 
+            href="/watch-list"
+            className="mt-4 inline-block bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
+          >
+            View Watch List
+          </Link>
+        </div>
+      </div>
+
       <h1 className="text-3xl font-bold mb-8">Web Price Checker</h1>
 
       <form onSubmit={handleSubmit} className="mb-8 space-y-4 max-w-xl">
