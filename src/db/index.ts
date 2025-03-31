@@ -9,6 +9,10 @@ const client = new Client({
   host: process.env.DATABASE_HOST,
   username: process.env.DATABASE_USERNAME,
   password: process.env.DATABASE_PASSWORD,
+  fetch: (url: string, init: any) => {
+    delete init['cache']; // Remove cache header
+    return fetch(url, init);
+  }
 });
 
 // Initialize Drizzle ORM
@@ -16,21 +20,37 @@ export const db = drizzle(client);
 
 // Helper functions for database operations
 export async function addProduct(product: typeof products.$inferInsert) {
-  return db.insert(products).values({
-    ...product,
-    currentPrice: Number(product.currentPrice),
-    previousPrice: product.previousPrice ? Number(product.previousPrice) : null
-  });
+  try {
+    await db.insert(products).values({
+      ...product,
+      currentPrice: Number(product.currentPrice),
+      previousPrice: product.previousPrice ? Number(product.previousPrice) : null,
+      lastChecked: new Date(product.lastChecked),
+      createdAt: new Date(product.createdAt)
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error adding product:', error);
+    throw error;
+  }
 }
 
 export async function updateProduct(id: string, data: Partial<typeof products.$inferInsert>) {
-  return db.update(products)
-    .set({
-      ...data,
-      currentPrice: data.currentPrice ? Number(data.currentPrice) : undefined,
-      previousPrice: data.previousPrice ? Number(data.previousPrice) : undefined
-    })
-    .where(eq(products.id, id));
+  try {
+    await db.update(products)
+      .set({
+        ...data,
+        currentPrice: data.currentPrice ? Number(data.currentPrice) : undefined,
+        previousPrice: data.previousPrice ? Number(data.previousPrice) : undefined,
+        lastChecked: data.lastChecked ? new Date(data.lastChecked) : undefined,
+        createdAt: data.createdAt ? new Date(data.createdAt) : undefined
+      })
+      .where(eq(products.id, id));
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating product:', error);
+    throw error;
+  }
 }
 
 export async function deleteProduct(id: string) {
