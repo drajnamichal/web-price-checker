@@ -11,10 +11,12 @@ export async function POST() {
         try {
           const newPrice = await checkPrice(product.url, product.priceSelector);
           
-          if (newPrice !== product.currentPrice) {
+          // Convert both to numbers for comparison
+          const currentPriceNum = Number(product.currentPrice);
+          if (newPrice !== currentPriceNum) {
             // Update product in database
             await updateProduct(product.id, {
-              previousPrice: product.currentPrice,
+              previousPrice: currentPriceNum,
               currentPrice: newPrice,
               lastChecked: new Date().toISOString()
             });
@@ -28,7 +30,7 @@ export async function POST() {
 
             return {
               ...product,
-              previousPrice: product.currentPrice,
+              previousPrice: currentPriceNum,
               currentPrice: newPrice,
               lastChecked: new Date().toISOString()
             };
