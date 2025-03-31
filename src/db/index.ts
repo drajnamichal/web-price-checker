@@ -12,7 +12,7 @@ const connection = connect({
 });
 
 // Initialize Drizzle ORM
-export const db = drizzle(connection);
+export const db = drizzle(connection.connection);
 
 // Helper functions for database operations
 export async function addProduct(product: typeof products.$inferInsert) {
