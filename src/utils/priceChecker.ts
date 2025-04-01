@@ -31,10 +31,13 @@ export function shouldNotifyPriceDrop(currentPrice: number, previousPrice: numbe
   return currentPrice < previousPrice;
 }
 
-export function formatPrice(price: number, currency: 'EUR' | 'CZK'): string {
-  return new Intl.NumberFormat(currency === 'EUR' ? 'sk-SK' : 'cs-CZ', {
+export function formatPrice(price: number, currency?: 'EUR' | 'CZK'): string {
+  // Default to EUR if no currency provided
+  const currencyToUse = currency || 'EUR';
+  
+  return new Intl.NumberFormat(currencyToUse === 'EUR' ? 'sk-SK' : 'cs-CZ', {
     style: 'currency',
-    currency: currency,
+    currency: currencyToUse,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(price);

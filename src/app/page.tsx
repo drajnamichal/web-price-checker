@@ -166,11 +166,11 @@ export default function Home() {
                     </div>
                     <div className="mt-4">
                       <p className="text-2xl font-bold text-green-600">
-                        {formatPrice(product.currentPrice, product.currency)}
+                        {formatPrice(product.currentPrice, product.currency || 'EUR')}
                       </p>
                       {product.previousPrice && (
                         <p className="text-sm text-gray-500">
-                          Predchádzajúca: {formatPrice(product.previousPrice, product.currency)}
+                          Predchádzajúca: {formatPrice(product.previousPrice, product.currency || 'EUR')}
                           {product.currentPrice < product.previousPrice && (
                             <span className="ml-2 text-green-600">
                               ↓ {((1 - product.currentPrice / product.previousPrice) * 100).toFixed(1)}%
