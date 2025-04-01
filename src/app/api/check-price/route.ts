@@ -27,52 +27,81 @@ function findProductName($: cheerio.CheerioAPI): string {
   return '';
 }
 
+type PriceInfo = {
+  price: number;
+  currency: 'EUR' | 'CZK';
+  text: string;
+};
+
 function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EUR' | 'CZK' } | null {
-  // Common selectors for prices
+  // First try to find the price in strong elements containing currency
+  const strongPrices = $('strong').filter((_, el) => {
+    const text = $(el).text().trim();
+    return text.includes('Kč') || text.includes('€');
+  });
+
+  let lowestPrice: { price: number; currency: 'EUR' | 'CZK' } | null = null;
+
+  strongPrices.each((_, el) => {
+    const text = $(el).text().trim();
+    const priceInfo = extractPriceFromText(text);
+    if (priceInfo && priceInfo.price > 0) {
+      if (!lowestPrice || priceInfo.price < lowestPrice.price) {
+        lowestPrice = priceInfo;
+        console.log('Found price in strong:', { text, price: priceInfo.price, currency: priceInfo.currency });
+      }
+    }
+  });
+
+  if (lowestPrice) {
+    return lowestPrice;
+  }
+
+  // If no price found in strong elements, try other common selectors
   const priceSelectors = [
-    'strong:contains("Kč"), strong:contains("€")',
     '[itemprop="price"]',
     '.price',
     '.product-price',
     '.current-price',
     '#price',
-    'strong.price',
-    '.our-price strong',
     '.price-wrapper'
   ];
 
   for (const selector of priceSelectors) {
     const elements = $(selector);
-    if (elements.length) {
-      let foundPrice: { price: number; currency: 'EUR' | 'CZK' } | null = null;
-      elements.each((_, element) => {
-        if (foundPrice) return false; // Stop if we found a valid price
-        const text = $(element).text().trim();
-        const priceInfo = extractPriceFromText(text);
-        if (priceInfo) {
-          foundPrice = priceInfo;
-          return false; // Stop iteration
+    elements.each((_, el) => {
+      const text = $(el).text().trim();
+      const priceInfo = extractPriceFromText(text);
+      if (priceInfo && priceInfo.price > 0) {
+        if (!lowestPrice || priceInfo.price < lowestPrice.price) {
+          lowestPrice = priceInfo;
+          console.log('Found price with selector:', { selector, text, price: priceInfo.price, currency: priceInfo.currency });
         }
-      });
-      if (foundPrice) return foundPrice;
-    }
+      }
+    });
   }
 
-  // If no price found with common selectors, try to find any price-like pattern
-  let bestPrice: { price: number; currency: 'EUR' | 'CZK' } | null = null;
+  if (lowestPrice) {
+    return lowestPrice;
+  }
+
+  // If still no price found, try to find any price-like pattern
   const pricePattern = /\d+[\s,.]?\d+[\s,.]?\d+\s*(?:Kč|€)?|\€?\s*\d+[\s,.]?\d+[\s,.]?\d+/;
   
   $('*').each((_, element) => {
     const text = $(element).text().trim();
-    if (pricePattern.test(text) && !text.includes('/ ks')) {
+    if (pricePattern.test(text) && !text.includes('/ ks') && !text.includes('od') && !text.includes('do')) {
       const priceInfo = extractPriceFromText(text);
-      if (priceInfo && (!bestPrice || priceInfo.price < bestPrice.price)) {
-        bestPrice = priceInfo;
+      if (priceInfo && priceInfo.price > 0) {
+        if (!lowestPrice || priceInfo.price < lowestPrice.price) {
+          lowestPrice = priceInfo;
+          console.log('Found price in general search:', { text, price: priceInfo.price, currency: priceInfo.currency });
+        }
       }
     }
   });
 
-  return bestPrice;
+  return lowestPrice;
 }
 
 function extractPriceFromText(text: string): { price: number; currency: 'EUR' | 'CZK' } | null {
@@ -88,15 +117,20 @@ function extractPriceFromText(text: string): { price: number; currency: 'EUR' | 
     }
 
     // Clean up the price text
-    const cleanPrice = text.replace(/[^0-9,\.]/g, '');
+    const cleanText = text.replace(/\s+/g, ' ').trim();
+    // Extract numbers with optional spaces, commas, or dots
+    const matches = cleanText.match(/\d+(?:[\s,.]\d+)*/);
+    if (!matches) return null;
+    
+    const cleanPrice = matches[0].replace(/\s/g, '');
     
     // Handle European price format (1 792,61 or 1.792,61)
     let price: number;
-    if (cleanPrice.includes(',') && /,\d{2}$/.test(cleanPrice)) {
+    if (cleanPrice.includes(',')) {
       // Remove thousands separators and replace comma with dot
-      price = parseFloat(cleanPrice.replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
+      price = parseFloat(cleanPrice.replace(/\./g, '').replace(',', '.'));
     } else {
-      price = parseFloat(cleanPrice.replace(/,/g, ''));
+      price = parseFloat(cleanPrice);
     }
 
     if (!isNaN(price) && isValidPrice(price)) {
