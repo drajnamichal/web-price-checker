@@ -8,19 +8,25 @@ export async function checkPrice(url: string, selector: string): Promise<number>
       selector
     });
     
+    if (!response.data || typeof response.data.price !== 'number') {
+      throw new Error('Invalid price data received from server');
+    }
+    
     return response.data.price;
   } catch (error) {
     if (axios.isAxiosError(error)) {
       console.error('Network error:', {
         status: error.response?.status,
         statusText: error.response?.statusText,
+        data: error.response?.data,
         url,
         message: error.message
       });
-      throw new Error(error.response?.data?.error || `Failed to fetch the price: ${error.message}`);
+      const errorMessage = error.response?.data?.error || `Failed to fetch the price: ${error.message}`;
+      throw new Error(errorMessage);
     }
     console.error('Error checking price:', error);
-    throw error;
+    throw new Error('Failed to check price. Please verify the URL and price selector.');
   }
 }
 
