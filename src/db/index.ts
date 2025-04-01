@@ -75,10 +75,11 @@ export async function getProducts(): Promise<Product[]> {
 
 export async function addPriceHistory(data: typeof priceHistory.$inferInsert) {
   try {
+    const now = new Date();
     await db.insert(priceHistory).values({
-      ...data,
+      productId: data.productId,
       price: Number(data.price),
-      timestamp: new Date(data.timestamp)
+      timestamp: now
     });
     return { success: true };
   } catch (error) {
