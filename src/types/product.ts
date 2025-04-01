@@ -6,6 +6,7 @@ export interface Product {
   currentPrice: number;
   previousPrice: number | null;
   lastChecked: string;
+  currency: 'EUR' | 'CZK';
 }
 
 export interface PriceHistory {

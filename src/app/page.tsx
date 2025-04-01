@@ -41,9 +41,10 @@ export default function Home() {
         url,
         priceSelector,
         name,
-        currentPrice: initialPrice,
+        currentPrice: initialPrice.price,
         previousPrice: null,
-        lastChecked: new Date().toISOString()
+        lastChecked: new Date().toISOString(),
+        currency: initialPrice.currency
       };
 
       // Store the product
@@ -165,11 +166,11 @@ export default function Home() {
                     </div>
                     <div className="mt-4">
                       <p className="text-2xl font-bold text-green-600">
-                        {formatPrice(product.currentPrice)}
+                        {formatPrice(product.currentPrice, product.currency)}
                       </p>
                       {product.previousPrice && (
                         <p className="text-sm text-gray-500">
-                          Predchádzajúca: {formatPrice(product.previousPrice)}
+                          Predchádzajúca: {formatPrice(product.previousPrice, product.currency)}
                           {product.currentPrice < product.previousPrice && (
                             <span className="ml-2 text-green-600">
                               ↓ {((1 - product.currentPrice / product.previousPrice) * 100).toFixed(1)}%

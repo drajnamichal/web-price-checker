@@ -2,18 +2,21 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { Product } from '@/types/product';
 
-export async function checkPrice(url: string, selector: string): Promise<number> {
+export async function checkPrice(url: string, selector: string): Promise<{ price: number; currency: 'EUR' | 'CZK' }> {
   try {
     const response = await axios.post('/api/check-price', {
       url,
       selector
     });
     
-    if (!response.data || typeof response.data.price !== 'number') {
+    if (!response.data || typeof response.data.price !== 'number' || !response.data.currency) {
       throw new Error('Neplatné údaje o cene prijaté zo servera');
     }
     
-    return response.data.price;
+    return {
+      price: response.data.price,
+      currency: response.data.currency
+    };
   } catch (error) {
     if (axios.isAxiosError(error)) {
       const errorMessage = error.response?.data?.error || 'Nepodarilo sa skontrolovať cenu';
@@ -28,10 +31,10 @@ export function shouldNotifyPriceDrop(currentPrice: number, previousPrice: numbe
   return currentPrice < previousPrice;
 }
 
-export function formatPrice(price: number): string {
-  return new Intl.NumberFormat('sk-SK', {
+export function formatPrice(price: number, currency: 'EUR' | 'CZK'): string {
+  return new Intl.NumberFormat(currency === 'EUR' ? 'sk-SK' : 'cs-CZ', {
     style: 'currency',
-    currency: 'EUR',
+    currency: currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(price);
@@ -54,7 +57,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
 export function sendPriceDropNotification(product: Product): void {
   if (Notification.permission === 'granted' && product.previousPrice) {
     new Notification('Price Drop Alert!', {
-      body: `${product.name} price dropped from ${formatPrice(product.previousPrice)} to ${formatPrice(product.currentPrice)}!`,
+      body: `${product.name} price dropped from ${formatPrice(product.previousPrice, product.currency)} to ${formatPrice(product.currentPrice, product.currency)}!`,
       icon: '/notification-icon.png'
     });
   }
