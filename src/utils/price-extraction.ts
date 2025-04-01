@@ -25,11 +25,11 @@ export function findProductName($: cheerio.CheerioAPI): string {
   return '';
 }
 
-export type PriceInfo = {
+interface PriceInfo {
   price: number;
   currency: 'EUR' | 'CZK';
   text: string;
-};
+}
 
 function cleanPriceText(text: string): string {
   // Remove any non-essential characters
@@ -113,10 +113,10 @@ export function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EU
   ];
 
   const pricePattern = /(\d+(?:[\s,.]\d+)*)\s*(?:€|Kč|EUR|CZK)/i;
-  let bestPrice: { price: number; currency: 'EUR' | 'CZK'; text: string } | null = null;
+  let bestPrice: PriceInfo | null = null;
 
   // Helper function to process text and update best price
-  const processText = (text: string, source: string) => {
+  const processText = (text: string, source: string): void => {
     text = cleanPriceText(text);
     if (!text) return;
     
@@ -135,7 +135,7 @@ export function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EU
     }
 
     const priceText = match[1];
-    const currency = text.toLowerCase().includes('kč') || text.toLowerCase().includes('czk') ? 'CZK' : 'EUR';
+    const currency = text.toLowerCase().includes('kč') || text.toLowerCase().includes('czk') ? 'CZK' as const : 'EUR' as const;
     const price = parsePriceValue(priceText);
     
     if (price !== null) {
@@ -194,10 +194,11 @@ export function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EU
 
   if (bestPrice) {
     console.log('Final price found:', bestPrice);
-    return {
+    const result: { price: number; currency: 'EUR' | 'CZK' } = {
       price: bestPrice.price,
       currency: bestPrice.currency
     };
+    return result;
   }
 
   console.log('No valid price found');
