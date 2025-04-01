@@ -179,11 +179,15 @@ export function findPrice($: cheerio.CheerioAPI): { price: number; currency: Cur
     });
   }
 
-  if (currentBestPrice) {
-    return {
-      price: currentBestPrice.price,
-      currency: currentBestPrice.currency
+  // Ensure type safety when returning the price
+  const bestPrice = currentBestPrice as PriceInfo | null;
+  
+  if (bestPrice !== null) {
+    const result: { price: number; currency: Currency } = {
+      price: bestPrice.price,
+      currency: bestPrice.currency
     };
+    return result;
   }
 
   console.log('No valid price found');
