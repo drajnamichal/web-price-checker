@@ -6,7 +6,6 @@ export interface Product {
   currentPrice: number;
   previousPrice: number | null;
   lastChecked: string;
-  createdAt?: string;
 }
 
 export interface PriceHistory {
