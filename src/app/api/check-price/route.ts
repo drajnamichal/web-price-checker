@@ -34,7 +34,33 @@ type PriceInfo = {
 };
 
 function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EUR' | 'CZK' } | null {
-  // First try to find prices with currency symbols
+  // First try the main product price element
+  const mainPriceElement = $('.cena[id^="variant_price"]');
+  if (mainPriceElement.length) {
+    const text = mainPriceElement.contents().first().text().trim();
+    if (text) {
+      const match = text.match(/(\d+(?:[\s,.]\d+)*)\s*(?:€|Kč)/);
+      if (match) {
+        const priceText = match[1];
+        const currency = text.includes('€') ? 'EUR' : 'CZK';
+        const cleanPrice = priceText.replace(/\s/g, '');
+        let price: number;
+        
+        if (cleanPrice.includes(',')) {
+          price = parseFloat(cleanPrice.replace(/\./g, '').replace(',', '.'));
+        } else {
+          price = parseFloat(cleanPrice);
+        }
+
+        if (!isNaN(price) && price > 0 && price < 1000000) {
+          console.log('Found main price:', { text, price, currency });
+          return { price, currency };
+        }
+      }
+    }
+  }
+
+  // Fallback to other price elements only if main price not found
   const pricePattern = /(\d+(?:[\s,.]\d+)*)\s*(?:€|Kč)/i;
   let lowestPrice: { price: number; currency: 'EUR' | 'CZK' } | null = null;
 
@@ -52,12 +78,10 @@ function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EUR' | 'C
     const priceText = match[1];
     const currency = text.includes('€') ? 'EUR' : 'CZK';
     
-    // Clean and parse the price
     const cleanPrice = priceText.replace(/\s/g, '');
     let price: number;
     
     if (cleanPrice.includes(',')) {
-      // Handle European format (1.809,80 or 1809,80)
       price = parseFloat(cleanPrice.replace(/\./g, '').replace(',', '.'));
     } else {
       price = parseFloat(cleanPrice);
@@ -66,54 +90,27 @@ function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EUR' | 'C
     if (!isNaN(price) && price > 0 && price < 1000000) {
       if (!lowestPrice || price < lowestPrice.price) {
         lowestPrice = { price, currency };
-        console.log('Found price:', { text, price, currency });
+        console.log('Found fallback price:', { text, price, currency });
       }
     }
   };
 
-  // Check specific price-related elements first in priority order
+  // Only check other elements if main price was not found
   const priceSelectors = [
-    '.cena',
-    '[id^="variant_price"]',
     '[itemprop="price"]',
     '.product-price',
     '.current-price',
     '.price',
     'strong',
-    'h2',
-    'span:not(.secmena)' // Exclude secondary currency spans
+    'span:not(.secmena)'
   ];
 
-  // First try exact price elements
   for (const selector of priceSelectors) {
-    const elements = $(selector);
-    if (elements.length) {
-      elements.each((_, el) => {
-        const element = $(el);
-        // Skip if this is a container with multiple prices
-        if (element.find('.price, .cena, [itemprop="price"]').length > 0) return;
-        
-        const text = element.text();
-        processText(text);
-      });
-      
-      // If we found a price in a primary price element, return it
-      if (lowestPrice) {
-        return lowestPrice;
-      }
-    }
-  }
-
-  // If still no price found, try broader search but exclude secondary currency spans
-  if (!lowestPrice) {
-    $('*').each((_, el) => {
+    $(selector).each((_, el) => {
       const element = $(el);
-      if (element.hasClass('secmena')) return; // Skip secondary currency elements
-      
+      if (element.find('.price, [itemprop="price"]').length > 0) return;
       const text = element.text();
-      if (text.includes('€') || text.includes('Kč')) {
-        processText(text);
-      }
+      processText(text);
     });
   }
 
