@@ -26,6 +26,49 @@ function extractPriceWithXPath($: cheerio.CheerioAPI, selector: string): string 
   }
 }
 
+async function switchCurrency(url: string): Promise<string> {
+  try {
+    // First, try to get the page with EUR currency parameter
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'sk-SK,sk;q=0.9,en-US;q=0.8,en;q=0.7',
+      },
+      timeout: 10000
+    });
+
+    const $ = cheerio.load(response.data);
+    
+    // Find the EUR currency switch link
+    const eurLink = $('a:contains("EUR")').attr('href');
+    
+    if (eurLink) {
+      // Get the base URL
+      const baseUrl = new URL(url).origin;
+      const fullEurLink = eurLink.startsWith('http') ? eurLink : `${baseUrl}${eurLink}`;
+      
+      // Make the currency switch request
+      const switchResponse = await axios.get(fullEurLink, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'sk-SK,sk;q=0.9,en-US;q=0.8,en;q=0.7',
+        },
+        maxRedirects: 5,
+        timeout: 10000
+      });
+      
+      return switchResponse.data;
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error switching currency:', error);
+    throw error;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { url, selector } = await request.json();
@@ -38,16 +81,10 @@ export async function POST(request: Request) {
     }
 
     try {
-      const response = await axios.get(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'sk-SK,sk;q=0.9,en-US;q=0.8,en;q=0.7',
-        },
-        timeout: 10000
-      });
-
-      const $ = cheerio.load(response.data);
+      // Switch to EUR currency and get the updated page content
+      const pageContent = await switchCurrency(url);
+      const $ = cheerio.load(pageContent);
+      
       let priceText = isXPath(selector) 
         ? extractPriceWithXPath($, selector)
         : $(selector).text().trim();
@@ -91,7 +128,10 @@ export async function POST(request: Request) {
 
       if (!priceText) {
         return NextResponse.json(
-          { error: 'Cena nebola nájdená. Prosím, overte selektor alebo XPath.' },
+          { 
+            error: 'Cena nebola nájdená. Prosím, overte selektor alebo XPath.',
+            debug: { html: $.html() }
+          },
           { status: 404 }
         );
       }
