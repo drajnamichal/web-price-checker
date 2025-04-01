@@ -26,7 +26,7 @@ export default function Home() {
     }
   }, [error]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -62,7 +62,7 @@ export default function Home() {
       // Store the product
       storeProduct(newProduct);
       setProducts([...products, newProduct]);
-      e.currentTarget.reset();
+      (e.target as HTMLFormElement).reset();
     } catch (error) {
       console.error('Error adding product:', error);
       setError(error instanceof Error ? error.message : 'Nepodarilo sa pridať produkt');
