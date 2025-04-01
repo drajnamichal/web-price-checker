@@ -21,12 +21,13 @@ export const db = drizzle(client);
 // Helper functions for database operations
 export async function addProduct(product: typeof products.$inferInsert) {
   try {
+    const now = new Date();
     await db.insert(products).values({
       ...product,
       currentPrice: Number(product.currentPrice),
       previousPrice: product.previousPrice ? Number(product.previousPrice) : null,
-      lastChecked: new Date(product.lastChecked),
-      createdAt: new Date(product.createdAt)
+      lastChecked: now,
+      createdAt: now
     });
     return { success: true };
   } catch (error) {
@@ -37,14 +38,18 @@ export async function addProduct(product: typeof products.$inferInsert) {
 
 export async function updateProduct(id: string, data: Partial<typeof products.$inferInsert>) {
   try {
+    const updateData: any = {
+      ...data,
+      currentPrice: data.currentPrice ? Number(data.currentPrice) : undefined,
+      previousPrice: data.previousPrice ? Number(data.previousPrice) : undefined,
+    };
+
+    if (data.lastChecked) {
+      updateData.lastChecked = new Date(data.lastChecked);
+    }
+
     await db.update(products)
-      .set({
-        ...data,
-        currentPrice: data.currentPrice ? Number(data.currentPrice) : undefined,
-        previousPrice: data.previousPrice ? Number(data.previousPrice) : undefined,
-        lastChecked: data.lastChecked ? new Date(data.lastChecked) : undefined,
-        createdAt: data.createdAt ? new Date(data.createdAt) : undefined
-      })
+      .set(updateData)
       .where(eq(products.id, id));
     return { success: true };
   } catch (error) {
@@ -69,10 +74,17 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 export async function addPriceHistory(data: typeof priceHistory.$inferInsert) {
-  return db.insert(priceHistory).values({
-    ...data,
-    price: Number(data.price)
-  });
+  try {
+    await db.insert(priceHistory).values({
+      ...data,
+      price: Number(data.price),
+      timestamp: new Date(data.timestamp)
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error adding price history:', error);
+    throw error;
+  }
 }
 
 export async function getPriceHistory(productId: string) {
