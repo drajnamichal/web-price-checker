@@ -3,7 +3,7 @@ import { kv } from '@vercel/kv';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { Product } from '@/types/product';
-import { findPrice, findProductName } from '../check-price/route';
+import { findPrice } from '@/utils/price-extraction';
 
 const ONE_HOUR = 60 * 60 * 1000; // 1 hour in milliseconds
 
