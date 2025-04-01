@@ -60,6 +60,10 @@ export async function POST(request: Request) {
           '.product-price',
           '.current-price',
           '#price',
+          'strong:contains("€")',  // Add selector for strong elements containing €
+          'strong.price',
+          '.our-price strong',     // Add selector for "Naše cena" strong element
+          '//strong[contains(text(), "€")]',  // XPath for strong elements with €
           '//span[@class="price"]',
           '//div[contains(@class, "price")]',
           '//span[@itemprop="price"]'
@@ -74,6 +78,18 @@ export async function POST(request: Request) {
       }
 
       if (!priceText) {
+        // Try to find any element containing a price-like pattern
+        const pricePattern = /\d+[\s,.]?\d+[\s,.]?\d+\s*€|\€\s*\d+[\s,.]?\d+[\s,.]?\d+/;
+        $('*').each((_, element) => {
+          const text = $(element).text().trim();
+          if (pricePattern.test(text)) {
+            priceText = text;
+            return false; // break the loop
+          }
+        });
+      }
+
+      if (!priceText) {
         return NextResponse.json(
           { error: 'Cena nebola nájdená. Prosím, overte selektor alebo XPath.' },
           { status: 404 }
@@ -82,13 +98,22 @@ export async function POST(request: Request) {
 
       // Clean up the price text and convert to number
       const cleanPrice = priceText.replace(/[^0-9,\.]/g, '');
-      const price = cleanPrice.includes(',') && /,\d{2}$/.test(cleanPrice)
-        ? parseFloat(cleanPrice.replace(',', '.'))
-        : parseFloat(cleanPrice.replace(/,/g, ''));
+      
+      // Handle European price format (1 792,61 or 1.792,61)
+      let price: number;
+      if (cleanPrice.includes(',') && /,\d{2}$/.test(cleanPrice)) {
+        // Remove thousands separators and replace comma with dot
+        price = parseFloat(cleanPrice.replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
+      } else {
+        price = parseFloat(cleanPrice.replace(/,/g, ''));
+      }
 
       if (isNaN(price)) {
         return NextResponse.json(
-          { error: `Nepodarilo sa spracovať cenu z textu: "${priceText}"` },
+          { 
+            error: `Nepodarilo sa spracovať cenu z textu: "${priceText}"`,
+            debug: { priceText, cleanPrice }
+          },
           { status: 400 }
         );
       }
