@@ -7,6 +7,11 @@ function isXPath(selector: string): boolean {
   return selector.startsWith('/') || selector.startsWith('(');
 }
 
+function isValidPrice(price: number): boolean {
+  // Prices should be reasonable - between 1 and 1,000,000
+  return price > 0 && price < 1000000;
+}
+
 function extractPriceWithXPath($: cheerio.CheerioAPI, selector: string): string {
   try {
     // Convert HTML to string to use with XPath
@@ -28,9 +33,26 @@ function extractPriceWithXPath($: cheerio.CheerioAPI, selector: string): string 
       .replace(/\]/g, ']')
       .replace(/\//g, ' > ');
     
-    const result = $(cssSelector).text().trim();
-    console.log('XPath conversion:', { original: selector, converted: cssSelector, result });
-    return result;
+    // Get all matching elements and their text content
+    const prices: string[] = [];
+    $(cssSelector).each((_, el) => {
+      const text = $(el).text().trim();
+      // Only include text that looks like a price
+      if (/^\d[\d\s,.]*\d$/.test(text.replace(/[Kč€]/g, '').trim())) {
+        prices.push(text);
+      }
+    });
+
+    console.log('Found prices:', prices);
+    
+    // Get the first valid price
+    const validPrice = prices.find(price => {
+      const cleaned = price.replace(/[^0-9,\.]/g, '');
+      const num = parseFloat(cleaned.replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
+      return !isNaN(num) && isValidPrice(num);
+    });
+
+    return validPrice || '';
   } catch (error) {
     console.error('XPath extraction error:', error);
     return '';
