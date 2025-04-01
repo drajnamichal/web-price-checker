@@ -78,96 +78,137 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-6">
             Sledovanie cien produktov
           </h1>
-          <p className="text-lg text-gray-600">
-            Pridajte URL produktu a budeme sledovať jeho cenu
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            Pridajte URL produktu a my budeme automaticky sledovať jeho cenu a upozorníme vás na zmeny
           </p>
         </div>
 
-        <div className="max-w-xl mx-auto mb-12">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="max-w-xl mx-auto mb-16 transform hover:scale-[1.01] transition-transform duration-300">
+          <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 space-y-6">
             <div>
-              <label htmlFor="url" className="sr-only">
+              <label htmlFor="url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 URL produktu
               </label>
-              <input
-                type="url"
-                id="url"
-                name="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="Zadajte URL produktu"
-                required
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
+              <div className="relative">
+                <input
+                  type="url"
+                  id="url"
+                  name="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://www.example.com/product"
+                  required
+                  className="block w-full rounded-xl border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 transition-all duration-200"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                </div>
+              </div>
             </div>
             <button
               type="submit"
               disabled={loading}
-              className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+              className={`w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl text-base font-medium text-white shadow-lg ${
                 loading
                   ? 'bg-blue-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                  : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform hover:scale-[1.02] transition-all duration-200'
               }`}
             >
-              {loading ? 'Pridávam...' : 'Pridať produkt'}
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Pridávam...
+                </>
+              ) : (
+                'Pridať produkt'
+              )}
             </button>
           </form>
 
           {error && (
-            <div className="mt-4 p-4 rounded-md bg-red-50 border border-red-200">
-              <p className="text-sm text-red-600">{error}</p>
+            <div className="mt-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 animate-fade-in">
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}
         </div>
 
-        {products.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {products.map((product) => (
-              <div key={product.id} className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">{product.name}</h3>
-                    <p className="text-gray-600 mb-4">
+        <div className="relative">
+          {products.length > 0 ? (
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+              {products.map((product) => (
+                <div 
+                  key={product.id} 
+                  className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 transform hover:scale-[1.02] transition-all duration-300 hover:shadow-2xl"
+                >
+                  <div className="flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white line-clamp-2">{product.name}</h3>
+                      <button
+                        onClick={() => handleDelete(product.id)}
+                        className="text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-full"
+                        aria-label="Odstrániť produkt"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                    
+                    <div className="flex-grow">
                       <a 
                         href={product.url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 transition-colors"
+                        className="inline-flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors mb-4"
                       >
-                        Zobraziť produkt ↗
+                        <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        Zobraziť produkt
                       </a>
-                    </p>
-                    <p className="text-2xl font-bold text-green-600">
-                      {formatPrice(product.price, product.currency)}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-2">
-                      Naposledy kontrolované: {new Date(product.lastChecked).toLocaleString('sk-SK')}
-                    </p>
+                      
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 mb-4">
+                        <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                          {formatPrice(product.price, product.currency)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                      <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Aktualizované: {new Date(product.lastChecked).toLocaleString('sk-SK')}
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handleDelete(product.id)}
-                    className="text-red-600 hover:text-red-800 transition-colors"
-                    aria-label="Odstrániť produkt"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-gray-500">
-            <p>Zatiaľ nie sú pridané žiadne produkty</p>
-          </div>
-        )}
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
+              <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              <p className="text-xl font-medium text-gray-600 dark:text-gray-300">
+                Zatiaľ nie sú pridané žiadne produkty
+              </p>
+              <p className="mt-2 text-gray-500 dark:text-gray-400">
+                Začnite pridaním URL produktu, ktorého cenu chcete sledovať
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </main>
   );

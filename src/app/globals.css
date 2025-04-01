@@ -6,16 +6,43 @@
   * {
     @apply transition-colors duration-200;
   }
+
+  body {
+    @apply antialiased;
+  }
+
+  input {
+    @apply transition-all duration-200;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 :root {
   --foreground-rgb: 0, 0, 0;
-  --background-rgb: 255, 255, 255;
+  --background-start-rgb: 249, 250, 251;
+  --background-end-rgb: 243, 244, 246;
 }
 
 [data-theme='dark'] {
   --foreground-rgb: 255, 255, 255;
-  --background-rgb: 17, 24, 39;
+  --background-start-rgb: 17, 24, 39;
+  --background-end-rgb: 31, 41, 55;
 }
 
 @theme inline {
@@ -27,13 +54,19 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 17, 24, 39;
+    --background-end-rgb: 31, 41, 55;
   }
 }
 
 body {
-  background: rgb(var(--background-rgb));
   color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+    to bottom right,
+    rgb(var(--background-start-rgb)),
+    rgb(var(--background-end-rgb))
+  );
+  min-height: 100vh;
   font-family: Arial, Helvetica, sans-serif;
 }
