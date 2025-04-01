@@ -11,6 +11,7 @@ export default function Home() {
   const [priceSelector, setPriceSelector] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Load products from API on mount
@@ -19,6 +20,14 @@ export default function Home() {
     // Request notification permission
     requestNotificationPermission();
   }, []);
+
+  // Clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   // Separate useEffect for price checking to properly handle products dependency
   useEffect(() => {
@@ -31,6 +40,7 @@ export default function Home() {
         setProducts(updatedProducts);
       } catch (error) {
         console.error('Error checking prices:', error);
+        setError('Failed to check prices. Please try again later.');
       }
     };
 
@@ -44,17 +54,22 @@ export default function Home() {
   const fetchProducts = async () => {
     try {
       const response = await fetch('/api/products');
-      if (!response.ok) throw new Error('Failed to fetch products');
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to fetch products');
+      }
       const products = await response.json();
       setProducts(products);
     } catch (error) {
       console.error('Error fetching products:', error);
+      setError('Failed to fetch products. Please try again later.');
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch('/api/products', {
@@ -69,20 +84,23 @@ export default function Home() {
         }),
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to add product');
+        throw new Error(data.error || 'Failed to add product');
       }
 
-      const newProduct = await response.json();
-      setProducts([...products, newProduct]);
-      
-      setUrl('');
-      setPriceSelector('');
-      setName('');
+      if (data.success && data.product) {
+        setProducts([...products, data.product]);
+        setUrl('');
+        setPriceSelector('');
+        setName('');
+      } else {
+        throw new Error('Invalid response from server');
+      }
     } catch (error) {
       console.error('Error adding product:', error);
-      alert('Error adding product. Please check the URL and price selector.');
+      setError(error instanceof Error ? error.message : 'Failed to add product');
     } finally {
       setLoading(false);
     }
@@ -104,6 +122,14 @@ export default function Home() {
           </Link>
         </div>
       </div>
+
+      {error && (
+        <div className="max-w-7xl mx-auto mb-4">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <span className="block sm:inline">{error}</span>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto">
         <form onSubmit={handleSubmit} className="mb-8 space-y-4 max-w-xl">
