@@ -31,88 +31,177 @@ export type PriceInfo = {
   text: string;
 };
 
-export function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EUR' | 'CZK' } | null {
-  // First try the main product price element
-  const mainPriceElement = $('.cena[id^="variant_price"]');
-  if (mainPriceElement.length) {
-    const text = mainPriceElement.contents().first().text().trim();
-    if (text) {
-      const match = text.match(/(\d+(?:[\s,.]\d+)*)\s*(?:€|Kč)/);
-      if (match) {
-        const priceText = match[1];
-        const currency = text.includes('€') ? 'EUR' : 'CZK';
-        const cleanPrice = priceText.replace(/\s/g, '');
-        let price: number;
-        
-        if (cleanPrice.includes(',')) {
-          price = parseFloat(cleanPrice.replace(/\./g, '').replace(',', '.'));
-        } else {
-          price = parseFloat(cleanPrice);
-        }
+function cleanPriceText(text: string): string {
+  // Remove any non-essential characters
+  return text
+    .replace(/[^\d,.\s€Kč]/g, '') // Keep only numbers, comma, dot, space, and currency symbols
+    .trim();
+}
 
-        if (!isNaN(price) && price > 0 && price < 1000000) {
-          console.log('Found main price:', { text, price, currency });
-          return { price, currency };
-        }
-      }
-    }
-  }
-
-  // Fallback to other price elements only if main price not found
-  const pricePattern = /(\d+(?:[\s,.]\d+)*)\s*(?:€|Kč)/i;
-  let lowestPrice: { price: number; currency: 'EUR' | 'CZK' } | null = null;
-
-  // Helper function to process text and update lowest price
-  const processText = (text: string) => {
-    text = text.trim();
-    if (!text) return;
+function parsePriceValue(priceText: string): number | null {
+  try {
+    // Remove any spaces and normalize decimal separators
+    const cleanPrice = priceText
+      .replace(/\s/g, '')
+      .replace(/(\d+)\.(\d{3})/g, '$1$2') // Remove thousand separators if they're dots
+      .replace(/(\d+),(\d{3})/g, '$1$2'); // Remove thousand separators if they're commas
     
-    // Skip secondary currency in parentheses
-    if (text.startsWith('(') && text.endsWith(')')) return;
-    
-    const match = text.match(pricePattern);
-    if (!match) return;
-
-    const priceText = match[1];
-    const currency = text.includes('€') ? 'EUR' : 'CZK';
-    
-    const cleanPrice = priceText.replace(/\s/g, '');
+    // Try to determine the decimal separator based on position
     let price: number;
-    
     if (cleanPrice.includes(',')) {
-      price = parseFloat(cleanPrice.replace(/\./g, '').replace(',', '.'));
+      const parts = cleanPrice.split(',');
+      if (parts[1] && parts[1].length <= 2) {
+        // Comma is likely a decimal separator (e.g., 123,45)
+        price = parseFloat(cleanPrice.replace(',', '.'));
+      } else {
+        // Comma is likely a thousand separator (e.g., 1,234)
+        price = parseFloat(cleanPrice.replace(',', ''));
+      }
+    } else if (cleanPrice.includes('.')) {
+      const parts = cleanPrice.split('.');
+      if (parts[1] && parts[1].length <= 2) {
+        // Dot is likely a decimal separator (e.g., 123.45)
+        price = parseFloat(cleanPrice);
+      } else {
+        // Dot is likely a thousand separator (e.g., 1.234)
+        price = parseFloat(cleanPrice.replace('.', ''));
+      }
     } else {
+      // No separators
       price = parseFloat(cleanPrice);
     }
 
-    if (!isNaN(price) && price > 0 && price < 1000000) {
-      if (!lowestPrice || price < lowestPrice.price) {
-        lowestPrice = { price, currency };
-        console.log('Found fallback price:', { text, price, currency });
+    return !isNaN(price) && price > 0 && price < 1000000 ? price : null;
+  } catch (error) {
+    console.error('Error parsing price:', { priceText, error });
+    return null;
+  }
+}
+
+export function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EUR' | 'CZK' } | null {
+  console.log('Starting price extraction...');
+  
+  // Common price selectors
+  const priceSelectors = [
+    // Specific price elements
+    '.price-wrapper .price',
+    '.product-price .price',
+    '.price.actual-price',
+    '.special-price .price',
+    '[data-price-type="finalPrice"] .price',
+    '[itemprop="price"]',
+    '.product-info-price .price',
+    '.product-price',
+    '.current-price',
+    '.price:not(.old-price)',
+    // Generic price containers
+    'strong:contains("€")',
+    'strong:contains("Kč")',
+    'span:contains("€"):not(.old-price)',
+    'span:contains("Kč"):not(.old-price)',
+    // Specific site selectors
+    '.cena[id^="variant_price"]',
+    '.product__price--final',
+    '.price-box',
+    // Additional selectors for common patterns
+    '[class*="price"]:not([class*="old"]):not([class*="regular"])',
+    '[class*="cena"]:not([class*="old"]):not([class*="regular"])',
+    '[class*="cost"]:not([class*="old"]):not([class*="regular"])',
+    // Meta tags
+    'meta[property="product:price:amount"]',
+    'meta[property="og:price:amount"]'
+  ];
+
+  const pricePattern = /(\d+(?:[\s,.]\d+)*)\s*(?:€|Kč|EUR|CZK)/i;
+  let bestPrice: { price: number; currency: 'EUR' | 'CZK'; text: string } | null = null;
+
+  // Helper function to process text and update best price
+  const processText = (text: string, source: string) => {
+    text = cleanPriceText(text);
+    if (!text) return;
+    
+    console.log('Processing price text:', { text, source });
+    
+    // Skip secondary currency in parentheses
+    if (text.startsWith('(') && text.endsWith(')')) {
+      console.log('Skipping secondary currency:', text);
+      return;
+    }
+    
+    const match = text.match(pricePattern);
+    if (!match) {
+      console.log('No price pattern match:', text);
+      return;
+    }
+
+    const priceText = match[1];
+    const currency = text.toLowerCase().includes('kč') || text.toLowerCase().includes('czk') ? 'CZK' : 'EUR';
+    const price = parsePriceValue(priceText);
+    
+    if (price !== null) {
+      console.log('Found valid price:', { text, price, currency, source });
+      if (!bestPrice || price < bestPrice.price) {
+        bestPrice = { price, currency, text };
       }
+    } else {
+      console.log('Invalid price value:', { text, priceText });
     }
   };
 
-  // Only check other elements if main price was not found
-  const priceSelectors = [
-    '[itemprop="price"]',
-    '.product-price',
-    '.current-price',
-    '.price',
-    'strong',
-    'span:not(.secmena)'
-  ];
+  // First check meta tags
+  $('meta[property="product:price:amount"], meta[property="og:price:amount"]').each((_, el) => {
+    const content = $(el).attr('content');
+    if (content) {
+      processText(content, 'meta-tag');
+    }
+  });
 
+  // Then try specific selectors
   for (const selector of priceSelectors) {
+    console.log('Trying selector:', selector);
     $(selector).each((_, el) => {
       const element = $(el);
-      if (element.find('.price, [itemprop="price"]').length > 0) return;
+      // Skip if this element is inside another price element
+      if (element.parents('.price, [itemprop="price"]').length > 0) {
+        return;
+      }
+      
+      // Try content attribute first (for meta tags)
+      const content = element.attr('content');
+      if (content) {
+        processText(content, `${selector} [content]`);
+      }
+      
+      // Then try text content
       const text = element.text();
-      processText(text);
+      processText(text, selector);
     });
   }
 
-  return lowestPrice;
+  // If no price found, try a broader search
+  if (!bestPrice) {
+    console.log('No price found with specific selectors, trying broader search...');
+    $('*').each((_, el) => {
+      const element = $(el);
+      if (element.children().length === 0) {
+        const text = element.text().trim();
+        if (text.match(/\d+(?:[\s,.]\d+)*\s*[€KčEURCZK]/i)) {
+          processText(text, 'broad-search');
+        }
+      }
+    });
+  }
+
+  if (bestPrice) {
+    console.log('Final price found:', bestPrice);
+    return {
+      price: bestPrice.price,
+      currency: bestPrice.currency
+    };
+  }
+
+  console.log('No valid price found');
+  return null;
 }
 
 export function isValidPrice(price: number): boolean {
