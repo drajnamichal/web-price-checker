@@ -31,16 +31,14 @@ export function shouldNotifyPriceDrop(currentPrice: number, previousPrice: numbe
   return currentPrice < previousPrice;
 }
 
-export function formatPrice(price: number, currency?: 'EUR' | 'CZK'): string {
-  // Default to EUR if no currency provided
-  const currencyToUse = currency || 'EUR';
-  
-  return new Intl.NumberFormat(currencyToUse === 'EUR' ? 'sk-SK' : 'cs-CZ', {
+export function formatPrice(price: number, currency: 'EUR' | 'CZK'): string {
+  const formatter = new Intl.NumberFormat('sk-SK', {
     style: 'currency',
-    currency: currencyToUse,
+    currency: currency,
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(price);
+    maximumFractionDigits: 2,
+  });
+  return formatter.format(price);
 }
 
 export async function requestNotificationPermission(): Promise<boolean> {

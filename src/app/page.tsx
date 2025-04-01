@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Product } from '@/types/product';
 import { formatPrice } from '@/utils/priceChecker';
 import { getStoredProducts, addProduct as storeProduct, deleteProduct } from '@/utils/storage';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -52,17 +53,19 @@ export default function Home() {
         throw new Error(error.error || 'Nepodarilo sa pridať produkt');
       }
 
-      const { name, price, currency } = await response.json();
-
-      // Create new product
+      const data = await response.json();
+      const { name, price, currency } = data;
       const newProduct: Product = {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         url,
         name,
-        currentPrice: price,
-        previousPrice: null,
+        price,
+        currency,
         lastChecked: new Date().toISOString(),
-        currency
+        priceHistory: [
+          { price, date: new Date().toISOString() }
+        ],
+        createdAt: new Date().toISOString()
       };
 
       // Store the product
@@ -130,46 +133,36 @@ export default function Home() {
               <h3 className="text-xl font-semibold mb-4">Vaše produkty</h3>
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {products.map((product) => (
-                  <div
-                    key={product.id}
-                    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow p-4"
-                  >
+                  <div key={product.id} className="bg-white p-6 rounded-lg shadow-md">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h4 className="text-lg font-semibold text-gray-900">{product.name}</h4>
-                        <a 
-                          href={product.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-500 hover:text-blue-700 hover:underline"
-                        >
-                          Zobraziť produkt ↗
-                        </a>
+                        <h3 className="text-xl font-semibold mb-2">{product.name}</h3>
+                        <p className="text-gray-600 mb-4">
+                          <a 
+                            href={product.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                          >
+                            Zobraziť produkt ↗
+                          </a>
+                        </p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {formatPrice(product.price, product.currency)}
+                        </p>
+                        <p className="text-sm text-gray-500 mt-2">
+                          Naposledy kontrolované: {new Date(product.lastChecked).toLocaleString('sk-SK')}
+                        </p>
                       </div>
                       <button
                         onClick={() => handleDelete(product.id)}
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-600 hover:text-red-800 transition-colors"
+                        aria-label="Odstrániť produkt"
                       >
-                        ✕
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                       </button>
-                    </div>
-                    <div className="mt-4">
-                      <p className="text-2xl font-bold text-green-600">
-                        {formatPrice(product.currentPrice, product.currency || 'EUR')}
-                      </p>
-                      {product.previousPrice && (
-                        <p className="text-sm text-gray-500">
-                          Predchádzajúca: {formatPrice(product.previousPrice, product.currency || 'EUR')}
-                          {product.currentPrice < product.previousPrice && (
-                            <span className="ml-2 text-green-600">
-                              ↓ {((1 - product.currentPrice / product.previousPrice) * 100).toFixed(1)}%
-                            </span>
-                          )}
-                        </p>
-                      )}
-                      <p className="text-xs text-gray-400 mt-2">
-                        Naposledy kontrolované: {new Date(product.lastChecked).toLocaleString('sk')}
-                      </p>
                     </div>
                   </div>
                 ))}
