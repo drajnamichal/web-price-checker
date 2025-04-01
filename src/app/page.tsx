@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { Product } from '@/types/product';
 import { checkPrice, formatPrice } from '@/utils/priceChecker';
 import { getStoredProducts, addProduct as storeProduct, deleteProduct } from '@/utils/storage';
-import Link from 'next/link';
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -57,7 +56,7 @@ export default function Home() {
       setName('');
     } catch (error) {
       console.error('Error adding product:', error);
-      setError(error instanceof Error ? error.message : 'Failed to add product');
+      setError(error instanceof Error ? error.message : 'Nepodarilo sa pridať produkt');
     } finally {
       setLoading(false);
     }
@@ -72,9 +71,9 @@ export default function Home() {
     <main className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-extrabold text-gray-900">Price Checker</h2>
+          <h2 className="text-3xl font-extrabold text-gray-900">Sledovač cien</h2>
           <p className="mt-4 text-lg text-gray-600">
-            Add products to track their prices
+            Pridajte produkty na sledovanie ich cien
           </p>
         </div>
 
@@ -89,7 +88,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <form onSubmit={handleSubmit} className="mb-8 space-y-4 max-w-xl mx-auto">
             <div>
-              <label className="block text-sm font-medium mb-1">Product Name</label>
+              <label className="block text-sm font-medium mb-1">Názov produktu</label>
               <input
                 type="text"
                 value={name}
@@ -99,7 +98,7 @@ export default function Home() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Product URL</label>
+              <label className="block text-sm font-medium mb-1">URL produktu</label>
               <input
                 type="url"
                 value={url}
@@ -110,8 +109,8 @@ export default function Home() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
-                Price Selector (CSS)
-                <span className="ml-1 text-gray-500 hover:text-gray-700 cursor-help" title="Enter a CSS selector (e.g., #price, .price-actual) that targets the element containing the price.">
+                Selektor ceny (CSS)
+                <span className="ml-1 text-gray-500 hover:text-gray-700 cursor-help" title="Zadajte CSS selektor (napr. #price, .price-actual), ktorý označuje element obsahujúci cenu.">
                   ⓘ
                 </span>
               </label>
@@ -120,11 +119,11 @@ export default function Home() {
                 value={priceSelector}
                 onChange={(e) => setPriceSelector(e.target.value)}
                 className="w-full p-2 border rounded"
-                placeholder="e.g., #price, .price-actual"
+                placeholder="napr. #price, .price-actual"
                 required
               />
               <p className="mt-1 text-sm text-gray-500">
-                Tip: Use browser&apos;s inspect element to find the correct selector
+                Tip: Použite nástroj prehliadača &quot;Preskúmať element&quot; na nájdenie správneho selektora
               </p>
             </div>
             <button
@@ -132,13 +131,13 @@ export default function Home() {
               disabled={loading}
               className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300"
             >
-              {loading ? 'Adding...' : 'Add Product'}
+              {loading ? 'Pridávam...' : 'Pridať produkt'}
             </button>
           </form>
 
           {products.length > 0 && (
             <div className="mt-8">
-              <h3 className="text-xl font-semibold mb-4">Your Products</h3>
+              <h3 className="text-xl font-semibold mb-4">Vaše produkty</h3>
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {products.map((product) => (
                   <div
@@ -163,7 +162,7 @@ export default function Home() {
                       </p>
                       {product.previousPrice && (
                         <p className="text-sm text-gray-500">
-                          Previous: {formatPrice(product.previousPrice)}
+                          Predchádzajúca: {formatPrice(product.previousPrice)}
                           {product.currentPrice < product.previousPrice && (
                             <span className="ml-2 text-green-600">
                               ↓ {((1 - product.currentPrice / product.previousPrice) * 100).toFixed(1)}%
@@ -172,7 +171,7 @@ export default function Home() {
                         </p>
                       )}
                       <p className="text-xs text-gray-400 mt-2">
-                        Last checked: {new Date(product.lastChecked).toLocaleString()}
+                        Naposledy kontrolované: {new Date(product.lastChecked).toLocaleString('sk')}
                       </p>
                     </div>
                   </div>

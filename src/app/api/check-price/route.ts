@@ -8,7 +8,7 @@ export async function POST(request: Request) {
 
     if (!url || !selector) {
       return NextResponse.json(
-        { error: 'URL and selector are required' },
+        { error: 'URL a selektor sú povinné' },
         { status: 400 }
       );
     }
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Language': 'sk-SK,sk;q=0.9,en-US;q=0.8,en;q=0.7',
         },
         timeout: 10000
       });
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
       if (!priceText) {
         return NextResponse.json(
-          { error: 'Price element not found. Please verify the selector.' },
+          { error: 'Cena nebola nájdená. Prosím, overte selektor.' },
           { status: 404 }
         );
       }
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
       if (isNaN(price)) {
         return NextResponse.json(
-          { error: `Could not parse price from text: "${priceText}"` },
+          { error: `Nepodarilo sa spracovať cenu z textu: "${priceText}"` },
           { status: 400 }
         );
       }
@@ -67,12 +67,12 @@ export async function POST(request: Request) {
       if (axios.isAxiosError(error)) {
         if (error.code === 'ECONNABORTED') {
           return NextResponse.json(
-            { error: 'Request timed out. The website might be slow or blocking our requests.' },
+            { error: 'Vypršal časový limit požiadavky. Webová stránka môže byť pomalá alebo blokuje naše požiadavky.' },
             { status: 408 }
           );
         }
         return NextResponse.json(
-          { error: 'Failed to fetch the webpage. The website might be blocking our requests.' },
+          { error: 'Nepodarilo sa načítať webovú stránku. Stránka môže blokovať naše požiadavky.' },
           { status: error.response?.status || 500 }
         );
       }
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error processing request:', error);
     return NextResponse.json(
-      { error: 'Failed to process the request.' },
+      { error: 'Nepodarilo sa spracovať požiadavku.' },
       { status: 500 }
     );
   }

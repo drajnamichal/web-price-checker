@@ -10,13 +10,13 @@ export async function checkPrice(url: string, selector: string): Promise<number>
     });
     
     if (!response.data || typeof response.data.price !== 'number') {
-      throw new Error('Invalid price data received from server');
+      throw new Error('Neplatné údaje o cene prijaté zo servera');
     }
     
     return response.data.price;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      const errorMessage = error.response?.data?.error || 'Failed to check price';
+      const errorMessage = error.response?.data?.error || 'Nepodarilo sa skontrolovať cenu';
       throw new Error(errorMessage);
     }
     throw error;
@@ -29,7 +29,7 @@ export function shouldNotifyPriceDrop(currentPrice: number, previousPrice: numbe
 }
 
 export function formatPrice(price: number): string {
-  return new Intl.NumberFormat('cs-CZ', {
+  return new Intl.NumberFormat('sk-SK', {
     style: 'currency',
     currency: 'EUR',
     minimumFractionDigits: 2,
