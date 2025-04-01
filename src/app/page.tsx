@@ -2,14 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/product';
-import { checkPrice, formatPrice } from '@/utils/priceChecker';
+import { formatPrice } from '@/utils/priceChecker';
 import { getStoredProducts, addProduct as storeProduct, deleteProduct } from '@/utils/storage';
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [url, setUrl] = useState('');
-  const [priceSelector, setPriceSelector] = useState('');
-  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +27,15 @@ export default function Home() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const url = formData.get('url') as string;
+
+    if (!url) {
+      setError('URL je povinná');
+      setLoading(false);
+      return;
+    }
 
     try {
       // Check initial price
@@ -112,9 +118,10 @@ export default function Home() {
 
             <button
               type="submit"
-              className="inline-flex justify-center rounded-md border border-transparent bg-green-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              disabled={loading}
+              className="inline-flex justify-center rounded-md border border-transparent bg-green-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:bg-green-300"
             >
-              Pridať produkt
+              {loading ? 'Pridávam...' : 'Pridať produkt'}
             </button>
           </form>
 
