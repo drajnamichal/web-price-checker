@@ -1,13 +1,9 @@
 import axios from 'axios';
-import * as cheerio from 'cheerio';
 import { Product } from '@/types/product';
 
-export async function checkPrice(url: string, selector: string): Promise<{ price: number; currency: 'EUR' | 'CZK' }> {
+export async function checkPrice(url: string): Promise<{ price: number; currency: 'EUR' | 'CZK' }> {
   try {
-    const response = await axios.post('/api/check-price', {
-      url,
-      selector
-    });
+    const response = await axios.post('/api/check-price', { url });
     
     if (!response.data || typeof response.data.price !== 'number' || !response.data.currency) {
       throw new Error('Neplatné údaje o cene prijaté zo servera');
