@@ -147,7 +147,14 @@ export default function Home() {
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="text-lg font-semibold text-gray-900">{product.name}</h4>
-                        <p className="text-sm text-gray-500 truncate">{product.url}</p>
+                        <a 
+                          href={product.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-500 hover:text-blue-700 hover:underline"
+                        >
+                          Zobraziť produkt ↗
+                        </a>
                       </div>
                       <button
                         onClick={() => handleDelete(product.id)}
