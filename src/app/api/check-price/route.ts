@@ -5,7 +5,7 @@ import * as cheerio from 'cheerio';
 import { Product } from '@/types/product';
 import { v4 as uuidv4 } from 'uuid';
 
-function findProductName($: cheerio.CheerioAPI): string {
+export function findProductName($: cheerio.CheerioAPI): string {
   // Common selectors for product names
   const nameSelectors = [
     'h1',
@@ -36,7 +36,7 @@ type PriceInfo = {
   text: string;
 };
 
-function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EUR' | 'CZK' } | null {
+export function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EUR' | 'CZK' } | null {
   // First try the main product price element
   const mainPriceElement = $('.cena[id^="variant_price"]');
   if (mainPriceElement.length) {
