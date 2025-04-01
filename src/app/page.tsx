@@ -109,8 +109,8 @@ export default function Home() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
-                Selektor ceny (CSS)
-                <span className="ml-1 text-gray-500 hover:text-gray-700 cursor-help" title="Zadajte CSS selektor (napr. #price, .price-actual), ktorý označuje element obsahujúci cenu.">
+                Selektor ceny (CSS alebo XPath)
+                <span className="ml-1 text-gray-500 hover:text-gray-700 cursor-help" title="Zadajte CSS selektor (napr. #price, .price-actual) alebo XPath výraz (napr. //span[@class='price'])">
                   ⓘ
                 </span>
               </label>
@@ -119,11 +119,11 @@ export default function Home() {
                 value={priceSelector}
                 onChange={(e) => setPriceSelector(e.target.value)}
                 className="w-full p-2 border rounded"
-                placeholder="napr. #price, .price-actual"
+                placeholder="napr. #price, .price-actual, //span[@class='price']"
                 required
               />
               <p className="mt-1 text-sm text-gray-500">
-                Tip: Použite nástroj prehliadača &quot;Preskúmať element&quot; na nájdenie správneho selektora
+                Tip: Použite nástroj prehliadača &quot;Preskúmať element&quot; na nájdenie správneho selektora. Pre XPath začnite s // alebo /.
               </p>
             </div>
             <button

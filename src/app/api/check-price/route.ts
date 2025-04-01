@@ -2,6 +2,30 @@ import { NextResponse } from 'next/server';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
+function isXPath(selector: string): boolean {
+  // Simple check for XPath - starts with / or //
+  return selector.startsWith('/');
+}
+
+function extractPriceWithXPath($: cheerio.CheerioAPI, selector: string): string {
+  try {
+    // Convert HTML to string to use with XPath
+    const html = $.html();
+    // Use evaluate-xpath npm package if you need more complex XPath support
+    // For now, we'll use a simple conversion to CSS selector for basic XPath
+    const cssSelector = selector
+      .replace('//', '')
+      .replace(/\[@/g, '[')
+      .replace(/\]/g, ']')
+      .replace(/\//g, ' > ');
+    
+    return $(cssSelector).text().trim();
+  } catch (error) {
+    console.error('XPath extraction error:', error);
+    return '';
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { url, selector } = await request.json();
@@ -24,7 +48,9 @@ export async function POST(request: Request) {
       });
 
       const $ = cheerio.load(response.data);
-      let priceText = $(selector).text().trim();
+      let priceText = isXPath(selector) 
+        ? extractPriceWithXPath($, selector)
+        : $(selector).text().trim();
       
       if (!priceText) {
         // Try common price selectors if the provided one doesn't work
@@ -33,18 +59,23 @@ export async function POST(request: Request) {
           '.price',
           '.product-price',
           '.current-price',
-          '#price'
+          '#price',
+          '//span[@class="price"]',
+          '//div[contains(@class, "price")]',
+          '//span[@itemprop="price"]'
         ];
         
         for (const commonSelector of commonSelectors) {
-          priceText = $(commonSelector).text().trim();
+          priceText = isXPath(commonSelector)
+            ? extractPriceWithXPath($, commonSelector)
+            : $(commonSelector).text().trim();
           if (priceText) break;
         }
       }
 
       if (!priceText) {
         return NextResponse.json(
-          { error: 'Cena nebola nájdená. Prosím, overte selektor.' },
+          { error: 'Cena nebola nájdená. Prosím, overte selektor alebo XPath.' },
           { status: 404 }
         );
       }
