@@ -31,6 +31,24 @@ interface PriceInfo {
   text: string;
 }
 
+type PriceResult = {
+  price: number;
+  currency: 'EUR' | 'CZK';
+} | null;
+
+function isPriceInfo(value: any): value is PriceInfo {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'price' in value &&
+    'currency' in value &&
+    'text' in value &&
+    typeof value.price === 'number' &&
+    (value.currency === 'EUR' || value.currency === 'CZK') &&
+    typeof value.text === 'string'
+  );
+}
+
 function cleanPriceText(text: string): string {
   // Remove any non-essential characters
   return text
@@ -78,7 +96,7 @@ function parsePriceValue(priceText: string): number | null {
   }
 }
 
-export function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EUR' | 'CZK' } | null {
+export function findPrice($: cheerio.CheerioAPI): PriceResult {
   console.log('Starting price extraction...');
   
   // Common price selectors
@@ -196,7 +214,7 @@ export function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EU
     });
   }
 
-  if (bestPrice) {
+  if (bestPrice && isPriceInfo(bestPrice)) {
     console.log('Final price found:', bestPrice);
     return {
       price: bestPrice.price,
