@@ -90,7 +90,7 @@ export async function POST(request: Request) {
 
       if (!priceText) {
         // Try to find any element containing a price-like pattern
-        const pricePattern = /\d+[\s,.]?\d+[\s,.]?\d+\s*(?:Kč|€)|\€\s*\d+[\s,.]?\d+[\s,.]?\d+/;
+        const pricePattern = /\d+[\s,.]?\d+[\s,.]?\d+\s*(?:Kč|€)?|\€?\s*\d+[\s,.]?\d+[\s,.]?\d+/;
         $('*').each((_, element) => {
           const text = $(element).text().trim();
           if (pricePattern.test(text) && !text.includes('/ ks')) {
@@ -110,8 +110,29 @@ export async function POST(request: Request) {
         );
       }
 
-      // Determine currency
-      const currency = priceText.includes('Kč') ? 'CZK' : 'EUR';
+      // Determine currency based on text or amount
+      let currency: 'EUR' | 'CZK';
+      if (priceText.includes('Kč')) {
+        currency = 'CZK';
+      } else if (priceText.includes('€')) {
+        currency = 'EUR';
+      } else {
+        // Clean up the price text and convert to number first
+        const cleanPrice = priceText.replace(/[^0-9,\.]/g, '');
+        
+        // Handle European price format (1 792,61 or 1.792,61)
+        let price: number;
+        if (cleanPrice.includes(',') && /,\d{2}$/.test(cleanPrice)) {
+          // Remove thousands separators and replace comma with dot
+          price = parseFloat(cleanPrice.replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
+        } else {
+          price = parseFloat(cleanPrice.replace(/,/g, ''));
+        }
+
+        // Determine currency based on amount
+        currency = price < 2000 ? 'EUR' : 'CZK';
+        console.log('No currency symbol found, determined currency based on amount:', { price, currency });
+      }
       
       // Clean up the price text and convert to number
       const cleanPrice = priceText.replace(/[^0-9,\.]/g, '');
