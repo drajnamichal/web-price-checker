@@ -194,11 +194,13 @@ export function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EU
 
   if (bestPrice) {
     console.log('Final price found:', bestPrice);
-    const result: { price: number; currency: 'EUR' | 'CZK' } = {
-      price: bestPrice.price,
-      currency: bestPrice.currency
-    };
-    return result;
+    if ('price' in bestPrice && 'currency' in bestPrice) {
+      const result: { price: number; currency: 'EUR' | 'CZK' } = {
+        price: bestPrice.price,
+        currency: bestPrice.currency
+      };
+      return result;
+    }
   }
 
   console.log('No valid price found');
