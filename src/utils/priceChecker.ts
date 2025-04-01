@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { Product } from '@/types/product';
 
 export async function checkPrice(url: string): Promise<{ price: number; currency: 'EUR' | 'CZK' }> {
   try {

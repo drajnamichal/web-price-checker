@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Product } from '@/types/product';
-import { formatPrice } from '@/utils/priceChecker';
-import { requestNotificationPermission, sendPriceDropNotification, shouldNotifyPriceDrop } from '@/utils/notifications';
+import { requestNotificationPermission, sendPriceDropNotification, shouldNotifyPriceDrop, formatPrice } from '@/utils/notifications';
 
 export default function Home() {
   const [url, setUrl] = useState('');
