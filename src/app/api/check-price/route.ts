@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
+import { kv } from '@vercel/kv';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { Product } from '@/types/product';
+import { v4 as uuidv4 } from 'uuid';
 
 function findProductName($: cheerio.CheerioAPI): string {
   // Common selectors for product names
@@ -168,11 +171,24 @@ export async function POST(request: Request) {
         );
       }
 
-      return NextResponse.json({ 
+      const now = new Date().toISOString();
+      const product: Product = {
+        id: uuidv4(),
         name,
+        url,
         price: priceInfo.price,
-        currency: priceInfo.currency
-      });
+        currency: priceInfo.currency,
+        lastChecked: now,
+        priceHistory: [
+          { price: priceInfo.price, date: now }
+        ],
+        createdAt: now
+      };
+
+      // Save to KV store
+      await kv.set(`product:${product.id}`, JSON.stringify(product));
+
+      return NextResponse.json(product);
 
     } catch (error) {
       if (axios.isAxiosError(error)) {

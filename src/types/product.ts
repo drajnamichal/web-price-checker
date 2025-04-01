@@ -1,11 +1,15 @@
 export type Product = {
   id: string;
-  url: string;
   name: string;
-  currentPrice: number;
-  previousPrice: number | null;
-  lastChecked: string;
+  url: string;
+  price: number;
   currency: 'EUR' | 'CZK';
+  lastChecked: string; // ISO date string
+  priceHistory: {
+    price: number;
+    date: string; // ISO date string
+  }[];
+  createdAt: string; // ISO date string
 };
 
 export interface PriceHistory {
