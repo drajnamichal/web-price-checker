@@ -5,7 +5,7 @@ import * as cheerio from 'cheerio';
 import { Product } from '@/types/product';
 import { findPrice } from '@/utils/price-extraction';
 
-const ONE_HOUR = 60 * 60 * 1000; // 1 hour in milliseconds
+const THIRTY_MINUTES = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 async function checkPrice(product: Product): Promise<Product> {
   try {
@@ -64,10 +64,10 @@ export async function GET() {
     const now = Date.now();
     const updatedProducts: Product[] = [];
 
-    // Check prices for products that haven't been checked in the last hour
+    // Check prices for products that haven't been checked in the last 30 minutes
     for (const product of products) {
       const lastChecked = new Date(product.lastChecked).getTime();
-      if (now - lastChecked >= ONE_HOUR) {
+      if (now - lastChecked >= THIRTY_MINUTES) {
         const updatedProduct = await checkPrice(product);
         updatedProducts.push(updatedProduct);
       } else {
