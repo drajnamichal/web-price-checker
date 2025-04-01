@@ -159,11 +159,12 @@ export function findPrice($: cheerio.CheerioAPI): PriceResult {
     if (price !== null) {
       console.log('Found valid price:', { text, price, currency, source });
       if (!bestPrice || price < bestPrice.price) {
-        bestPrice = {
+        const newPrice: PriceInfo = {
           price,
           currency,
           text
-        } satisfies PriceInfo;
+        };
+        bestPrice = newPrice;
       }
     } else {
       console.log('Invalid price value:', { text, priceText });
@@ -214,12 +215,13 @@ export function findPrice($: cheerio.CheerioAPI): PriceResult {
     });
   }
 
-  if (bestPrice && isPriceInfo(bestPrice)) {
+  if (bestPrice) {
     console.log('Final price found:', bestPrice);
-    return {
+    const result: PriceResult = {
       price: bestPrice.price,
       currency: bestPrice.currency
     };
+    return result;
   }
 
   console.log('No valid price found');
