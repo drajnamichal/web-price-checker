@@ -3,23 +3,34 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 function isXPath(selector: string): boolean {
-  // Simple check for XPath - starts with / or //
-  return selector.startsWith('/');
+  // XPath can start with /, //, or (
+  return selector.startsWith('/') || selector.startsWith('(');
 }
 
 function extractPriceWithXPath($: cheerio.CheerioAPI, selector: string): string {
   try {
     // Convert HTML to string to use with XPath
     const html = $.html();
-    // Use evaluate-xpath npm package if you need more complex XPath support
-    // For now, we'll use a simple conversion to CSS selector for basic XPath
-    const cssSelector = selector
-      .replace('//', '')
+    
+    // Handle different XPath patterns
+    let cssSelector = selector;
+    
+    // Handle indexed XPath expressions
+    if (selector.includes(')[')) {
+      cssSelector = selector
+        .replace(/\)\[(\d+)\]/g, ':eq($1-1)'); // Convert [n] to :eq(n-1) for 1-based to 0-based indexing
+    }
+    
+    // Basic XPath to CSS conversion
+    cssSelector = cssSelector
+      .replace(/^\(\/\/|\(\/|\/\/|\/|\)$/g, '') // Remove XPath prefixes and trailing parenthesis
       .replace(/\[@/g, '[')
       .replace(/\]/g, ']')
       .replace(/\//g, ' > ');
     
-    return $(cssSelector).text().trim();
+    const result = $(cssSelector).text().trim();
+    console.log('XPath conversion:', { original: selector, converted: cssSelector, result });
+    return result;
   } catch (error) {
     console.error('XPath extraction error:', error);
     return '';
