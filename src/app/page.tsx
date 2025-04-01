@@ -33,28 +33,36 @@ export default function Home() {
 
     try {
       // Check initial price
-      const initialPrice = await checkPrice(url, priceSelector);
+      const response = await fetch('/api/check-price', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Nepodarilo sa pridať produkt');
+      }
+
+      const { name, price, currency } = await response.json();
 
       // Create new product
       const newProduct: Product = {
         id: crypto.randomUUID(),
         url,
-        priceSelector,
         name,
-        currentPrice: initialPrice.price,
+        currentPrice: price,
         previousPrice: null,
         lastChecked: new Date().toISOString(),
-        currency: initialPrice.currency
+        currency
       };
 
       // Store the product
       storeProduct(newProduct);
       setProducts([...products, newProduct]);
-
-      // Reset form
-      setUrl('');
-      setPriceSelector('');
-      setName('');
+      e.currentTarget.reset();
     } catch (error) {
       console.error('Error adding product:', error);
       setError(error instanceof Error ? error.message : 'Nepodarilo sa pridať produkt');
@@ -87,52 +95,26 @@ export default function Home() {
         )}
 
         <div className="max-w-7xl mx-auto">
-          <form onSubmit={handleSubmit} className="mb-8 space-y-4 max-w-xl mx-auto">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Názov produktu</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full p-2 border rounded"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">URL produktu</label>
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="w-full p-2 border rounded"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Selektor ceny (CSS alebo XPath)
-                <span className="ml-1 text-gray-500 hover:text-gray-700 cursor-help" title="Zadajte CSS selektor (napr. #price, .price-actual) alebo XPath výraz (napr. //span[@class='price'])">
-                  ⓘ
-                </span>
+              <label htmlFor="url" className="block text-sm font-medium text-gray-700">
+                URL produktu
               </label>
               <input
-                type="text"
-                value={priceSelector}
-                onChange={(e) => setPriceSelector(e.target.value)}
-                className="w-full p-2 border rounded"
-                placeholder="napr. #price, .price-actual, //span[@class='price']"
+                type="url"
+                id="url"
+                name="url"
                 required
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                placeholder="https://example.com/product"
               />
-              <p className="mt-1 text-sm text-gray-500">
-                Tip: Použite nástroj prehliadača &quot;Preskúmať element&quot; na nájdenie správneho selektora. Pre XPath začnite s // alebo /.
-              </p>
             </div>
+
             <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300"
+              className="inline-flex justify-center rounded-md border border-transparent bg-green-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
             >
-              {loading ? 'Pridávam...' : 'Pridať produkt'}
+              Pridať produkt
             </button>
           </form>
 

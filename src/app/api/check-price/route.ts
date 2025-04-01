@@ -2,9 +2,110 @@ import { NextResponse } from 'next/server';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-function isXPath(selector: string): boolean {
-  // XPath can start with /, //, or (
-  return selector.startsWith('/') || selector.startsWith('(');
+function findProductName($: cheerio.CheerioAPI): string {
+  // Common selectors for product names
+  const nameSelectors = [
+    'h1',
+    '[itemprop="name"]',
+    '.product-name',
+    '.product-title',
+    '#product-title',
+    '.product_title',
+    'title'
+  ];
+
+  for (const selector of nameSelectors) {
+    const element = $(selector).first();
+    if (element.length) {
+      const text = element.text().trim();
+      if (text && text.length > 3) { // Ensure we have a meaningful name
+        return text;
+      }
+    }
+  }
+
+  return '';
+}
+
+function findPrice($: cheerio.CheerioAPI): { price: number; currency: 'EUR' | 'CZK' } | null {
+  // Common selectors for prices
+  const priceSelectors = [
+    'strong:contains("Kč"), strong:contains("€")',
+    '[itemprop="price"]',
+    '.price',
+    '.product-price',
+    '.current-price',
+    '#price',
+    'strong.price',
+    '.our-price strong',
+    '.price-wrapper'
+  ];
+
+  for (const selector of priceSelectors) {
+    const elements = $(selector);
+    if (elements.length) {
+      let foundPrice: { price: number; currency: 'EUR' | 'CZK' } | null = null;
+      elements.each((_, element) => {
+        if (foundPrice) return false; // Stop if we found a valid price
+        const text = $(element).text().trim();
+        const priceInfo = extractPriceFromText(text);
+        if (priceInfo) {
+          foundPrice = priceInfo;
+          return false; // Stop iteration
+        }
+      });
+      if (foundPrice) return foundPrice;
+    }
+  }
+
+  // If no price found with common selectors, try to find any price-like pattern
+  let bestPrice: { price: number; currency: 'EUR' | 'CZK' } | null = null;
+  const pricePattern = /\d+[\s,.]?\d+[\s,.]?\d+\s*(?:Kč|€)?|\€?\s*\d+[\s,.]?\d+[\s,.]?\d+/;
+  
+  $('*').each((_, element) => {
+    const text = $(element).text().trim();
+    if (pricePattern.test(text) && !text.includes('/ ks')) {
+      const priceInfo = extractPriceFromText(text);
+      if (priceInfo && (!bestPrice || priceInfo.price < bestPrice.price)) {
+        bestPrice = priceInfo;
+      }
+    }
+  });
+
+  return bestPrice;
+}
+
+function extractPriceFromText(text: string): { price: number; currency: 'EUR' | 'CZK' } | null {
+  try {
+    // Determine currency
+    let currency: 'EUR' | 'CZK';
+    if (text.includes('Kč')) {
+      currency = 'CZK';
+    } else if (text.includes('€')) {
+      currency = 'EUR';
+    } else {
+      return null; // Skip if no currency found
+    }
+
+    // Clean up the price text
+    const cleanPrice = text.replace(/[^0-9,\.]/g, '');
+    
+    // Handle European price format (1 792,61 or 1.792,61)
+    let price: number;
+    if (cleanPrice.includes(',') && /,\d{2}$/.test(cleanPrice)) {
+      // Remove thousands separators and replace comma with dot
+      price = parseFloat(cleanPrice.replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
+    } else {
+      price = parseFloat(cleanPrice.replace(/,/g, ''));
+    }
+
+    if (!isNaN(price) && isValidPrice(price)) {
+      return { price, currency };
+    }
+  } catch (error) {
+    console.error('Error extracting price:', error);
+  }
+  return null;
 }
 
 function isValidPrice(price: number): boolean {
@@ -12,60 +113,13 @@ function isValidPrice(price: number): boolean {
   return price > 0 && price < 1000000;
 }
 
-function extractPriceWithXPath($: cheerio.CheerioAPI, selector: string): string {
-  try {
-    // Convert HTML to string to use with XPath
-    const html = $.html();
-    
-    // Handle different XPath patterns
-    let cssSelector = selector;
-    
-    // Handle indexed XPath expressions
-    if (selector.includes(')[')) {
-      cssSelector = selector
-        .replace(/\)\[(\d+)\]/g, ':eq($1-1)'); // Convert [n] to :eq(n-1) for 1-based to 0-based indexing
-    }
-    
-    // Basic XPath to CSS conversion
-    cssSelector = cssSelector
-      .replace(/^\(\/\/|\(\/|\/\/|\/|\)$/g, '') // Remove XPath prefixes and trailing parenthesis
-      .replace(/\[@/g, '[')
-      .replace(/\]/g, ']')
-      .replace(/\//g, ' > ');
-    
-    // Get all matching elements and their text content
-    const prices: string[] = [];
-    $(cssSelector).each((_, el) => {
-      const text = $(el).text().trim();
-      // Only include text that looks like a price
-      if (/^\d[\d\s,.]*\d$/.test(text.replace(/[Kč€]/g, '').trim())) {
-        prices.push(text);
-      }
-    });
-
-    console.log('Found prices:', prices);
-    
-    // Get the first valid price
-    const validPrice = prices.find(price => {
-      const cleaned = price.replace(/[^0-9,\.]/g, '');
-      const num = parseFloat(cleaned.replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
-      return !isNaN(num) && isValidPrice(num);
-    });
-
-    return validPrice || '';
-  } catch (error) {
-    console.error('XPath extraction error:', error);
-    return '';
-  }
-}
-
 export async function POST(request: Request) {
   try {
-    const { url, selector } = await request.json();
+    const { url } = await request.json();
 
-    if (!url || !selector) {
+    if (!url) {
       return NextResponse.json(
-        { error: 'URL a selektor sú povinné' },
+        { error: 'URL je povinná' },
         { status: 400 }
       );
     }
@@ -81,104 +135,37 @@ export async function POST(request: Request) {
       });
 
       const $ = cheerio.load(response.data);
-      let priceText = isXPath(selector) 
-        ? extractPriceWithXPath($, selector)
-        : $(selector).text().trim();
       
-      if (!priceText) {
-        // Try common price selectors if the provided one doesn't work
-        const commonSelectors = [
-          'strong:contains("Kč"), strong:contains("€")',  // Look for price in strong elements
-          '[itemprop="price"]',
-          '.price',
-          '.product-price',
-          '.current-price',
-          '#price',
-          'strong.price',
-          '.our-price strong',
-          '//strong[contains(text(), "Kč") or contains(text(), "€")]',
-          '//span[@class="price"]',
-          '//div[contains(@class, "price")]',
-          '//span[@itemprop="price"]'
-        ];
-        
-        for (const commonSelector of commonSelectors) {
-          priceText = isXPath(commonSelector)
-            ? extractPriceWithXPath($, commonSelector)
-            : $(commonSelector).text().trim();
-          if (priceText) break;
-        }
-      }
-
-      if (!priceText) {
-        // Try to find any element containing a price-like pattern
-        const pricePattern = /\d+[\s,.]?\d+[\s,.]?\d+\s*(?:Kč|€)?|\€?\s*\d+[\s,.]?\d+[\s,.]?\d+/;
-        $('*').each((_, element) => {
-          const text = $(element).text().trim();
-          if (pricePattern.test(text) && !text.includes('/ ks')) {
-            priceText = text;
-            return false; // break the loop
-          }
-        });
-      }
-
-      if (!priceText) {
+      // Extract product name
+      const name = findProductName($);
+      if (!name) {
         return NextResponse.json(
           { 
-            error: 'Cena nebola nájdená. Prosím, overte selektor alebo XPath.',
-            debug: { selector, html: $.html() }
+            error: 'Nepodarilo sa nájsť názov produktu',
+            debug: { url }
           },
           { status: 404 }
         );
       }
 
-      // Determine currency based on text or amount
-      let currency: 'EUR' | 'CZK';
-      if (priceText.includes('Kč')) {
-        currency = 'CZK';
-      } else if (priceText.includes('€')) {
-        currency = 'EUR';
-      } else {
-        // Clean up the price text and convert to number first
-        const cleanPrice = priceText.replace(/[^0-9,\.]/g, '');
-        
-        // Handle European price format (1 792,61 or 1.792,61)
-        let price: number;
-        if (cleanPrice.includes(',') && /,\d{2}$/.test(cleanPrice)) {
-          // Remove thousands separators and replace comma with dot
-          price = parseFloat(cleanPrice.replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
-        } else {
-          price = parseFloat(cleanPrice.replace(/,/g, ''));
-        }
-
-        // Determine currency based on amount
-        currency = price < 2000 ? 'EUR' : 'CZK';
-        console.log('No currency symbol found, determined currency based on amount:', { price, currency });
-      }
-      
-      // Clean up the price text and convert to number
-      const cleanPrice = priceText.replace(/[^0-9,\.]/g, '');
-      
-      // Handle European price format (1 792,61 or 1.792,61)
-      let price: number;
-      if (cleanPrice.includes(',') && /,\d{2}$/.test(cleanPrice)) {
-        // Remove thousands separators and replace comma with dot
-        price = parseFloat(cleanPrice.replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
-      } else {
-        price = parseFloat(cleanPrice.replace(/,/g, ''));
-      }
-
-      if (isNaN(price)) {
+      // Extract price
+      const priceInfo = findPrice($);
+      if (!priceInfo) {
         return NextResponse.json(
           { 
-            error: `Nepodarilo sa spracovať cenu z textu: "${priceText}"`,
-            debug: { priceText, cleanPrice }
+            error: 'Nepodarilo sa nájsť cenu produktu',
+            debug: { url, name }
           },
-          { status: 400 }
+          { status: 404 }
         );
       }
 
-      return NextResponse.json({ price, currency });
+      return NextResponse.json({ 
+        name,
+        price: priceInfo.price,
+        currency: priceInfo.currency
+      });
+
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.code === 'ECONNABORTED') {
