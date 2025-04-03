@@ -15,14 +15,22 @@ export default function Home() {
 
   useEffect(() => {
     // Track visit
-    fetch('/api/visits')
-      .then(res => res.json())
-      .then(data => {
-        if (data.visits) {
+    const fetchVisits = async () => {
+      try {
+        const response = await fetch('/api/visits');
+        if (!response.ok) {
+          throw new Error('Failed to fetch visits');
+        }
+        const data = await response.json();
+        if (typeof data.visits === 'number') {
           setVisits(data.visits);
         }
-      })
-      .catch(console.error);
+      } catch (error) {
+        console.error('Error fetching visits:', error);
+      }
+    };
+
+    fetchVisits();
 
     // Load products from localStorage
     const storedProducts = localStorage.getItem('products');
