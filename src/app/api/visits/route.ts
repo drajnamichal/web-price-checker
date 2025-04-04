@@ -1,32 +1,48 @@
 import { NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
+import { createClient } from '@supabase/supabase-js';
 
-const VISITS_KEY = 'total_visits';
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // Get current visits count
-    let visits = await kv.get<number>(VISITS_KEY);
-    
-    // Initialize if not exists
-    if (typeof visits !== 'number') {
-      visits = 0;
+    // Get visitor info from headers
+    const country = request.headers.get('x-vercel-ip-country') || 'unknown';
+    const city = request.headers.get('x-vercel-ip-city') || 'unknown';
+    const referrer = request.headers.get('referer') || 'direct';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+
+    // Insert visit data into Supabase
+    const { error: insertError } = await supabase
+      .from('visits')
+      .insert({
+        timestamp: new Date().toISOString(),
+        referrer: referrer,
+        country: country,
+        city: city,
+        user_agent: userAgent
+      });
+
+    if (insertError) {
+      console.error('Error inserting visit:', insertError);
     }
-    
-    // Increment visits
-    visits++;
-    
-    // Store new count
-    await kv.set(VISITS_KEY, visits);
-    
-    // Log for debugging
-    console.log('Current visits count:', visits);
-    
-    return NextResponse.json({ visits });
+
+    // Get total visit count
+    const { count, error: countError } = await supabase
+      .from('visits')
+      .select('*', { count: 'exact' });
+
+    if (countError) {
+      throw countError;
+    }
+
+    return NextResponse.json({ visits: count });
   } catch (error) {
-    console.error('Error tracking visits:', error);
+    console.error('Error tracking visit:', error);
     return NextResponse.json(
-      { error: 'Failed to track visit', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to track visit' },
       { status: 500 }
     );
   }
